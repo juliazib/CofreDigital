@@ -225,4 +225,15 @@ public class UsuarioDAO {
         result.getInt("falhas_token"),
         bloqueadoAte);
   }
+  
+  public boolean existeAdministrador() throws SQLException {
+      String sql =
+          "SELECT 1 FROM Usuarios WHERE GID = 1 LIMIT 1";
+
+      try (Statement statement = connection.createStatement();
+          ResultSet result = statement.executeQuery(sql)) {
+          return result.next();
+      }
+  }
+
 }

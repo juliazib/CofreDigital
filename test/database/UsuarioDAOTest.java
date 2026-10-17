@@ -176,4 +176,25 @@ public class UsuarioDAOTest {
 
     assertEquals(1, dao.contarAcessos(uid));
   }
+ 
+  @Test
+  public void existeAdministradorDeveRetornarFalseQuandoNaoExistirAdministrador()
+          throws SQLException {
+      assertFalse(dao.existeAdministrador());
+  }
+
+  @Test
+  public void existeAdministradorDeveRetornarTrueQuandoExistirAdministrador()
+          throws SQLException {
+      dao.inserir(
+          "Administrador",
+          "admin@example.com",
+          "hash-teste",
+          new byte[] { 1, 2, 3 },
+          1
+      );
+
+      assertTrue(dao.existeAdministrador());
+  }
+
 }
