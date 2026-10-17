@@ -14,6 +14,6 @@ java -cp "bin:lib/*" app.Main
 ```bash
 javac -d bin -cp "bin:lib/*" $(find test -name "*.java")
 find test -name "*Test.java" \
-  | sed 's|src/test/||; s|/|.|g; s|\.java$||' \
+  | sed 's|test/||; s|/|.|g; s|\.java$||' \
   | xargs java -cp "bin:lib/*" org.junit.runner.JUnitCore
 ```
