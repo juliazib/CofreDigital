@@ -1,2 +1,5 @@
 *.class
 bin/
+
+# Banco de dados local
+cofre.db

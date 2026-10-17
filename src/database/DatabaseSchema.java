@@ -1,3 +1,4 @@
+package database;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -20,7 +21,7 @@ public class DatabaseSchema {
               "email TEXT NOT NULL UNIQUE, " +
               "senha_hash TEXT NOT NULL, " +
               "token_cifrado BLOB NOT NULL, " +
-              "KID INTEGER, " +
+              "KID INTEGER UNIQUE, " +
               "GID INTEGER NOT NULL, " +
               "falhas_senha INTEGER NOT NULL DEFAULT 0, " +
               "falhas_token INTEGER NOT NULL DEFAULT 0, " +
