@@ -62,7 +62,7 @@ public final class AutenticacaoPresenter {
       throw new IllegalStateException(
           "A janela de autenticação ainda não foi criada.");
     }
-    while (true) {
+    autenticacao: while (true) {
       registrarEvento(2001, null);
       if (!view.solicitarLogin(model)) {
         registrarEvento(2002, null);
@@ -114,7 +114,7 @@ public final class AutenticacaoPresenter {
         }
         if (exibirSeBloqueado(email)) {
           registrarEvento(4002, usuarioAutenticado);
-          return null;
+          continue autenticacao;
         }
         view.exibirAviso("Código TOTP incorreto.");
       }

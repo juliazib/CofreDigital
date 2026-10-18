@@ -172,13 +172,15 @@ public class AutenticacaoPresenterTest {
   @Test
   public void deveInterromperAposTresFalhasDeTotp() throws Exception {
     FakeView view = new FakeView(
-        new String[] { EMAIL },
-        new char[][] { SENHA.toCharArray() },
+        new String[] { EMAIL, EMAIL_SECUNDARIO },
+        new char[][] { SENHA.toCharArray(), SENHA.toCharArray() },
         new String[] {
             "not-a-code",
             "not-a-code",
-            "not-a-code"
+            "not-a-code",
+            gerarCodigoValido()
         });
+    adicionarUsuarioSecundario();
 
     Usuario autenticado =
         new AutenticacaoPresenter(
@@ -186,7 +188,8 @@ public class AutenticacaoPresenterTest {
             new AutenticacaoModel(),
             view).autenticar();
 
-    assertNull(autenticado);
+    assertEquals(EMAIL_SECUNDARIO, autenticado.getEmail());
+    assertEquals(2, view.loginsSolicitados);
     assertTrue(view.avisos.contains(
         "Acesso bloqueado por dois minutos após três tentativas incorretas."));
     assertTrue(
