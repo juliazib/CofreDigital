@@ -14,8 +14,7 @@ public class Base32Test {
   private final Base32 base32 = new Base32(
       Base32.Alphabet.BASE32,
       true,
-      false
-  );
+      false);
 
   @Test
   public void deveCodificarTextoConformeRFC4648() {
@@ -68,8 +67,7 @@ public class Base32Test {
 
     assertArrayEquals(
         original,
-        base32.fromString(base32.toString(original))
-    );
+        base32.fromString(base32.toString(original)));
   }
 
   @Test
