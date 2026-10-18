@@ -1,4 +1,4 @@
-package app;
+package app.inicializacao;
 
 import java.awt.Window;
 
@@ -6,17 +6,17 @@ import javax.swing.JOptionPane;
 
 import app.ui.componentes.CampoSenha;
 
-public final class SwingInicializacaoView
+public final class InicializacaoWindow
     implements InicializacaoPresenter.View {
 
   private final Window owner;
 
-  public SwingInicializacaoView(Window owner) {
+  InicializacaoWindow(Window owner) {
     this.owner = owner;
   }
 
   @Override
-  public char[] solicitarFraseSecreta() {
+  public boolean solicitarFraseSecreta(InicializacaoModel model) {
     CampoSenha campoSenha = new CampoSenha(24, 255);
     int opcao = JOptionPane.showConfirmDialog(
         owner,
@@ -30,12 +30,14 @@ public final class SwingInicializacaoView
 
     if (opcao != JOptionPane.OK_OPTION) {
       campoSenha.limpar();
-      return null;
+      return false;
     }
 
     char[] fraseSecreta = campoSenha.getPassword();
     campoSenha.limpar();
-    return fraseSecreta;
+    model.preencherFraseSecreta(fraseSecreta);
+    java.util.Arrays.fill(fraseSecreta, '\0');
+    return true;
   }
 
   @Override

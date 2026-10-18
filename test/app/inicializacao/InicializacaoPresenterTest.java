@@ -1,4 +1,4 @@
-package test.app;
+package test.app.inicializacao;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -17,7 +17,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import app.InicializacaoPresenter;
+import app.inicializacao.InicializacaoModel;
+import app.inicializacao.InicializacaoPresenter;
 import database.ChaveiroDAO;
 import database.DatabaseSchema;
 import database.UsuarioDAO;
@@ -54,7 +55,10 @@ public class InicializacaoPresenterTest {
 
     frase = "admin".toCharArray();
     view = new FakeView(frase);
-    presenter = new InicializacaoPresenter(connection, view);
+    presenter = new InicializacaoPresenter(
+        connection,
+        new InicializacaoModel(),
+        view);
   }
 
   @After
@@ -118,8 +122,13 @@ public class InicializacaoPresenterTest {
     }
 
     @Override
-    public char[] solicitarFraseSecreta() {
-      return frase;
+    public boolean solicitarFraseSecreta(InicializacaoModel model) {
+      if (frase == null) {
+        return false;
+      }
+      model.preencherFraseSecreta(frase);
+      Arrays.fill(frase, '\0');
+      return true;
     }
 
     @Override

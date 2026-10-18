@@ -1,4 +1,4 @@
-package test.app;
+package test.app.autenticacao;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -14,7 +14,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import app.AutenticacaoPresenter;
+import app.autenticacao.AutenticacaoModel;
+import app.autenticacao.AutenticacaoPresenter;
 import crypto.PasswordUtils;
 import crypto.TOTP;
 import crypto.TokenUtils;
@@ -62,7 +63,10 @@ public class AutenticacaoPresenterTest {
         new String[] { gerarCodigoValido() });
 
     Usuario autenticado =
-        new AutenticacaoPresenter(connection, view).autenticar();
+        new AutenticacaoPresenter(
+            connection,
+            new AutenticacaoModel(),
+            view).autenticar();
 
     assertEquals(EMAIL, autenticado.getEmail());
     assertTrue(view.avisos.isEmpty());
@@ -78,7 +82,10 @@ public class AutenticacaoPresenterTest {
         new String[] { "not-a-code", gerarCodigoValido() });
 
     Usuario autenticado =
-        new AutenticacaoPresenter(connection, view).autenticar();
+        new AutenticacaoPresenter(
+            connection,
+            new AutenticacaoModel(),
+            view).autenticar();
 
     assertEquals(EMAIL, autenticado.getEmail());
     assertEquals(1, view.avisos.size());
@@ -98,7 +105,10 @@ public class AutenticacaoPresenterTest {
         new String[] { gerarCodigoValido() });
 
     Usuario autenticado =
-        new AutenticacaoPresenter(connection, view).autenticar();
+        new AutenticacaoPresenter(
+            connection,
+            new AutenticacaoModel(),
+            view).autenticar();
 
     assertEquals(EMAIL, autenticado.getEmail());
     assertEquals(1, view.avisos.size());
@@ -120,7 +130,10 @@ public class AutenticacaoPresenterTest {
         new String[] { gerarCodigoValido() });
 
     Usuario autenticado =
-        new AutenticacaoPresenter(connection, view).autenticar();
+        new AutenticacaoPresenter(
+            connection,
+            new AutenticacaoModel(),
+            view).autenticar();
 
     assertEquals(EMAIL, autenticado.getEmail());
     assertEquals(1, view.avisos.size());
@@ -141,7 +154,10 @@ public class AutenticacaoPresenterTest {
         });
 
     Usuario autenticado =
-        new AutenticacaoPresenter(connection, view).autenticar();
+        new AutenticacaoPresenter(
+            connection,
+            new AutenticacaoModel(),
+            view).autenticar();
 
     assertNull(autenticado);
     assertTrue(view.avisos.contains(
@@ -158,7 +174,10 @@ public class AutenticacaoPresenterTest {
         new char[0][],
         new String[0]);
 
-    assertNull(new AutenticacaoPresenter(connection, view).autenticar());
+    assertNull(new AutenticacaoPresenter(
+        connection,
+        new AutenticacaoModel(),
+        view).autenticar());
     assertTrue(view.avisos.isEmpty());
   }
 
@@ -169,7 +188,10 @@ public class AutenticacaoPresenterTest {
         new char[0][],
         new String[0]);
 
-    assertNull(new AutenticacaoPresenter(connection, view).autenticar());
+    assertNull(new AutenticacaoPresenter(
+        connection,
+        new AutenticacaoModel(),
+        view).autenticar());
     assertTrue(view.avisos.isEmpty());
   }
 
@@ -186,7 +208,10 @@ public class AutenticacaoPresenterTest {
         new String[0]);
 
     Usuario autenticado =
-        new AutenticacaoPresenter(connection, view).autenticar();
+        new AutenticacaoPresenter(
+            connection,
+            new AutenticacaoModel(),
+            view).autenticar();
 
     assertNull(autenticado);
     assertEquals(3, view.avisos.size());
@@ -231,21 +256,35 @@ public class AutenticacaoPresenterTest {
     }
 
     @Override
-    public String solicitarLogin() {
-      return loginAtual < logins.length ? logins[loginAtual++] : null;
+    public boolean solicitarLogin(AutenticacaoModel model) {
+      if (loginAtual >= logins.length || logins[loginAtual] == null) {
+        loginAtual++;
+        return false;
+      }
+      model.preencherLogin(logins[loginAtual++]);
+      return true;
     }
 
     @Override
-    public char[] solicitarSenha(String email) {
-      emailsSolicitadosParaSenha.add(email);
-      return senhaAtual < senhas.length ? senhas[senhaAtual++] : null;
+    public boolean solicitarSenha(AutenticacaoModel model) {
+      emailsSolicitadosParaSenha.add(model.getEmail());
+      if (senhaAtual >= senhas.length) {
+        return false;
+      }
+      char[] senha = senhas[senhaAtual++];
+      model.preencherSenha(senha);
+      java.util.Arrays.fill(senha, '\0');
+      return true;
     }
 
     @Override
-    public String solicitarCodigoTotp() {
-      return codigoAtual < codigos.length
-          ? codigos[codigoAtual++]
-          : null;
+    public boolean solicitarCodigoTotp(AutenticacaoModel model) {
+      if (codigoAtual >= codigos.length || codigos[codigoAtual] == null) {
+        codigoAtual++;
+        return false;
+      }
+      model.preencherCodigoTotp(codigos[codigoAtual++]);
+      return true;
     }
 
     @Override

@@ -1,4 +1,4 @@
-package app;
+package app.autenticacao;
 
 import java.awt.Window;
 
@@ -7,17 +7,17 @@ import javax.swing.JOptionPane;
 import app.ui.componentes.CampoSenha;
 import app.ui.componentes.CampoTexto;
 
-public final class SwingAutenticacaoView
+public final class AutenticacaoWindow
     implements AutenticacaoPresenter.View {
 
   private final Window owner;
 
-  public SwingAutenticacaoView(Window owner) {
+  AutenticacaoWindow(Window owner) {
     this.owner = owner;
   }
 
   @Override
-  public String solicitarLogin() {
+  public boolean solicitarLogin(AutenticacaoModel model) {
     CampoTexto campoLogin = new CampoTexto(24, 254);
     int opcao = JOptionPane.showConfirmDialog(
         owner,
@@ -25,32 +25,39 @@ public final class SwingAutenticacaoView
         "Autenticação",
         JOptionPane.OK_CANCEL_OPTION,
         JOptionPane.PLAIN_MESSAGE);
-    return opcao == JOptionPane.OK_OPTION
-        ? campoLogin.getText().trim()
-        : null;
+    if (opcao != JOptionPane.OK_OPTION) {
+      return false;
+    }
+    model.preencherLogin(campoLogin.getText().trim());
+    return true;
   }
 
   @Override
-  public char[] solicitarSenha(String email) {
+  public boolean solicitarSenha(AutenticacaoModel model) {
     CampoSenha campoSenha = new CampoSenha(24, 255);
     int opcao = JOptionPane.showConfirmDialog(
         owner,
-        new Object[] { "Senha pessoal para " + email + ":", campoSenha },
+        new Object[] {
+            "Senha pessoal para " + model.getEmail() + ":",
+            campoSenha
+        },
         "Autenticação",
         JOptionPane.OK_CANCEL_OPTION,
         JOptionPane.PLAIN_MESSAGE);
     if (opcao != JOptionPane.OK_OPTION) {
       campoSenha.limpar();
-      return null;
+      return false;
     }
 
     char[] senha = campoSenha.getPassword();
     campoSenha.limpar();
-    return senha;
+    model.preencherSenha(senha);
+    java.util.Arrays.fill(senha, '\0');
+    return true;
   }
 
   @Override
-  public String solicitarCodigoTotp() {
+  public boolean solicitarCodigoTotp(AutenticacaoModel model) {
     CampoTexto campoCodigo = new CampoTexto(8, 6);
     int opcao = JOptionPane.showConfirmDialog(
         owner,
@@ -58,9 +65,11 @@ public final class SwingAutenticacaoView
         "Autenticação em dois fatores",
         JOptionPane.OK_CANCEL_OPTION,
         JOptionPane.PLAIN_MESSAGE);
-    return opcao == JOptionPane.OK_OPTION
-        ? campoCodigo.getText().trim()
-        : null;
+    if (opcao != JOptionPane.OK_OPTION) {
+      return false;
+    }
+    model.preencherCodigoTotp(campoCodigo.getText().trim());
+    return true;
   }
 
   @Override
