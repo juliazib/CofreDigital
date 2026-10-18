@@ -3,3 +3,12 @@ bin/
 
 # Banco de dados local
 cofre.db
+
+# Chaves privadas e material criptográfico
+*.key
+*.pem
+*.env
+*.enc
+*.asd
+*.shr
+*.crt
