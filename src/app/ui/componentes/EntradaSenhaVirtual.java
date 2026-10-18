@@ -2,7 +2,6 @@ package app.ui.componentes;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.Window;
 import java.security.SecureRandom;
@@ -21,15 +20,14 @@ public final class EntradaSenhaVirtual extends JPanel {
   private static final SecureRandom ALEATORIO = new SecureRandom();
   private static final String DIGITOS = "0123456789";
 
-  private final char[] senha;
+  private final char[][] paresSelecionados;
   private final int tamanhoMinimo;
   private final int tamanhoMaximo;
   private final JLabel mascara = new JLabel("", SwingConstants.LEFT);
-  private final JPanel[] pares = new JPanel[5];
-  private final JButton[][] botoesDigito = new JButton[5][2];
+  private final JButton[] botoesPar = new JButton[5];
   private final JButton confirmar = new JButton("OK");
   private JDialog dialogo;
-  private char[] senhaConfirmada;
+  private char[][] paresConfirmados;
   private int quantidade;
 
   public EntradaSenhaVirtual(
@@ -40,7 +38,7 @@ public final class EntradaSenhaVirtual extends JPanel {
       throw new IllegalArgumentException(
           "Os limites da senha virtual são inválidos.");
     }
-    senha = new char[tamanhoMaximo];
+    paresSelecionados = new char[tamanhoMaximo][2];
     this.tamanhoMinimo = tamanhoMinimo;
     this.tamanhoMaximo = tamanhoMaximo;
 
@@ -56,12 +54,12 @@ public final class EntradaSenhaVirtual extends JPanel {
     add(campo, BorderLayout.NORTH);
     add(teclado, BorderLayout.CENTER);
     setToolTipText(
-        "Selecione um dos dígitos do par; os pares mudam após cada entrada.");
+        "Selecione o par; os dígitos mudam após cada entrada.");
     embaralharPares();
     atualizarBotoes();
   }
 
-  public static char[] solicitarSenha(
+  public static char[][] solicitarPares(
       Window owner,
       int tamanhoMinimo,
       int tamanhoMaximo) {
@@ -78,15 +76,21 @@ public final class EntradaSenhaVirtual extends JPanel {
     entrada.dialogo.setLocationRelativeTo(owner);
     entrada.dialogo.setVisible(true);
     entrada.limpar();
-    return entrada.senhaConfirmada;
+    return entrada.paresConfirmados;
   }
 
-  public char[] getPassword() {
-    return Arrays.copyOf(senha, quantidade);
+  public char[][] getParesSelecionados() {
+    char[][] copia = new char[quantidade][2];
+    for (int i = 0; i < quantidade; i++) {
+      copia[i] = paresSelecionados[i].clone();
+    }
+    return copia;
   }
 
   public void limpar() {
-    Arrays.fill(senha, '\0');
+    for (char[] par : paresSelecionados) {
+      Arrays.fill(par, '\0');
+    }
     quantidade = 0;
     atualizarMascara();
     embaralharPares();
@@ -97,30 +101,23 @@ public final class EntradaSenhaVirtual extends JPanel {
     JPanel teclado = new JPanel(new GridLayout(2, 1, 8, 8));
     JPanel primeiraLinha = new JPanel(new GridLayout(1, 4, 8, 8));
     JPanel segundaLinha = new JPanel(new GridLayout(1, 4, 8, 8));
-    for (int i = 0; i < pares.length; i++) {
-      pares[i] = new JPanel(new GridLayout(1, 2, 6, 0));
-      pares[i].setBorder(BorderFactory.createCompoundBorder(
-          BorderFactory.createEtchedBorder(),
-          BorderFactory.createEmptyBorder(4, 4, 4, 4)));
-      pares[i].setPreferredSize(new Dimension(132, 50));
-      for (int j = 0; j < botoesDigito[i].length; j++) {
-        JButton botao = new JButton();
-        botao.addActionListener(evento -> adicionarDigito(
-            botao.getActionCommand().charAt(0)));
-        botoesDigito[i][j] = botao;
-        pares[i].add(botao);
-      }
+    for (int i = 0; i < botoesPar.length; i++) {
+      JButton botao = new JButton();
+      botao.setPreferredSize(new Dimension(132, 50));
+      botao.addActionListener(
+          evento -> adicionarPar(evento.getActionCommand()));
+      botoesPar[i] = botao;
     }
 
-    primeiraLinha.add(pares[0]);
-    primeiraLinha.add(pares[1]);
-    primeiraLinha.add(pares[2]);
+    primeiraLinha.add(botoesPar[0]);
+    primeiraLinha.add(botoesPar[1]);
+    primeiraLinha.add(botoesPar[2]);
     confirmar.addActionListener(evento -> confirmarSenha());
     confirmar.setPreferredSize(new Dimension(132, 50));
     primeiraLinha.add(confirmar);
 
-    segundaLinha.add(pares[3]);
-    segundaLinha.add(pares[4]);
+    segundaLinha.add(botoesPar[3]);
+    segundaLinha.add(botoesPar[4]);
     segundaLinha.add(new JPanel());
     JButton limpar = new JButton("LIMPAR");
     limpar.addActionListener(evento -> limpar());
@@ -148,11 +145,13 @@ public final class EntradaSenhaVirtual extends JPanel {
       return tela;
   }
 
-  private void adicionarDigito(char digito) {
+  private void adicionarPar(String par) {
     if (quantidade >= tamanhoMaximo) {
       return;
     }
-    senha[quantidade++] = digito;
+    paresSelecionados[quantidade][0] = par.charAt(0);
+    paresSelecionados[quantidade][1] = par.charAt(2);
+    quantidade++;
     atualizarMascara();
     embaralharPares();
     atualizarBotoes();
@@ -167,7 +166,7 @@ public final class EntradaSenhaVirtual extends JPanel {
           JOptionPane.WARNING_MESSAGE);
       return;
     }
-    senhaConfirmada = getPassword();
+    paresConfirmados = getParesSelecionados();
     if (dialogo != null) {
       dialogo.dispose();
     }
@@ -188,26 +187,26 @@ public final class EntradaSenhaVirtual extends JPanel {
       embaralhados[i] = embaralhados[indice];
       embaralhados[indice] = temporario;
     }
-    for (int i = 0; i < pares.length; i++) {
-      for (int j = 0; j < botoesDigito[i].length; j++) {
-        String digito = Character.toString(embaralhados[i * 2 + j]);
-        JButton botao = botoesDigito[i][j];
-        botao.setText(digito);
-        botao.setActionCommand(digito);
-        botao.getAccessibleContext().setAccessibleName(
-            "Dígito " + digito);
-      }
+    for (int i = 0; i < botoesPar.length; i++) {
+      char primeiro = embaralhados[i * 2];
+      char segundo = embaralhados[i * 2 + 1];
+      JButton botao = botoesPar[i];
+      String par = primeiro + " " + segundo;
+      botao.setActionCommand(par);
+      botao.setText(par);
+      botao.getAccessibleContext().setAccessibleName(
+          "Par de dígitos " + primeiro + " e " + segundo
+              + "; clique para selecionar ambos.");
     }
     Arrays.fill(embaralhados, '\0');
   }
 
   private void atualizarBotoes() {
     boolean habilitado = quantidade < tamanhoMaximo;
-    for (JButton[] par : botoesDigito) {
-      for (JButton botao : par) {
-        botao.setEnabled(habilitado);
-      }
+    for (JButton botao : botoesPar) {
+      botao.setEnabled(habilitado);
     }
     confirmar.setEnabled(quantidade >= tamanhoMinimo);
   }
+
 }

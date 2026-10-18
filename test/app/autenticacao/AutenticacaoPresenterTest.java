@@ -7,9 +7,12 @@ import static org.junit.Assert.assertTrue;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.bouncycastle.crypto.generators.OpenBSDBCrypt;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,7 +47,7 @@ public class AutenticacaoPresenterTest {
     usuarioDAO.inserir(
         "Administrador",
         EMAIL,
-        PasswordUtils.gerarHash(SENHA),
+        gerarHashRapidoParaTeste(SENHA),
         TokenUtils.cifrar(SEGREDO_TOTP, SENHA),
         1);
   }
@@ -227,6 +230,18 @@ public class AutenticacaoPresenterTest {
     return new TOTP(SEGREDO_TOTP, 30).generateCode();
   }
 
+  private static String gerarHashRapidoParaTeste(String senha) {
+    char[] caracteres = senha.toCharArray();
+    byte[] salt = new byte[16];
+    new SecureRandom().nextBytes(salt);
+    try {
+      return OpenBSDBCrypt.generate("2y", caracteres, salt, 4);
+    } finally {
+      Arrays.fill(caracteres, '\0');
+      Arrays.fill(salt, (byte) 0);
+    }
+  }
+
   private static boolean caracteresZerados(char[] caracteres) {
     for (char caractere : caracteres) {
       if (caractere != '\0') {
@@ -272,9 +287,20 @@ public class AutenticacaoPresenterTest {
         return false;
       }
       char[] senha = senhas[senhaAtual++];
-      model.preencherSenha(senha);
+      model.preencherParesSenha(paresPara(senha));
       java.util.Arrays.fill(senha, '\0');
       return true;
+    }
+
+    private static char[][] paresPara(char[] senha) {
+      char[][] pares = new char[senha.length][2];
+      for (int i = 0; i < senha.length; i++) {
+        pares[i][0] = senha[i];
+        pares[i][1] = senha[i] >= '0' && senha[i] <= '9'
+            ? (char) ('0' + (senha[i] - '0' + 1) % 10)
+            : senha[i];
+      }
+      return pares;
     }
 
     @Override

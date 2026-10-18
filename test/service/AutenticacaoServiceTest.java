@@ -2,14 +2,19 @@
 package test.service;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.util.Arrays;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.bouncycastle.crypto.generators.OpenBSDBCrypt;
 
 import crypto.PasswordUtils;
 import crypto.TOTP;
@@ -43,6 +48,18 @@ public class AutenticacaoServiceTest {
         throw new AssertionError(
             "Não foi possível encontrar um código TOTP inválido."
         );
+    }
+
+    private static String gerarHashRapidoParaTeste(String senha) {
+        char[] caracteres = senha.toCharArray();
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+        try {
+            return OpenBSDBCrypt.generate("2y", caracteres, salt, 4);
+        } finally {
+            Arrays.fill(caracteres, '\0');
+            Arrays.fill(salt, (byte) 0);
+        }
     }
 
 
@@ -115,6 +132,133 @@ public class AutenticacaoServiceTest {
         assertTrue(
             autenticacao.validarSenha("teste@example.com", "12345678")
         );
+    }
+
+    @Test
+    public void deveValidarPinQuandoSenhaFoiInseridaComoPares() throws Exception {
+        UsuarioDAO usuarioDAO = new UsuarioDAO(connection);
+        usuarioDAO.inserir(
+            "Usuário de Teste",
+            "teste@example.com",
+            gerarHashRapidoParaTeste("12345678"),
+            new byte[] { 1, 2, 3 },
+            2
+        );
+        autenticacao = new AutenticacaoService(usuarioDAO);
+
+        char[][] paresSelecionados = {
+            { '1', '9' },
+            { '3', '2' },
+            { '3', '9' },
+            { '4', '3' },
+            { '0', '5' },
+            { '4', '6' },
+            { '7', '6' },
+            { '6', '8' }
+        };
+
+        assertEquals(
+            "12345678",
+            autenticacao.validarSenhaPorPares(
+                "teste@example.com",
+                paresSelecionados));
+        assertEquals(
+            0,
+            usuarioDAO.buscarPorEmail("teste@example.com").getFalhasSenha());
+    }
+
+    @Test
+    public void deveEncontrarPinMesmoQuandoTodosOsDigitosEstaoNoSegundoLado()
+            throws Exception {
+        UsuarioDAO usuarioDAO = new UsuarioDAO(connection);
+        usuarioDAO.inserir(
+            "Usuário de Teste",
+            "teste@example.com",
+            PasswordUtils.gerarHash("12345678"),
+            new byte[] { 1, 2, 3 },
+            2
+        );
+        autenticacao = new AutenticacaoService(usuarioDAO);
+        char[][] paresSelecionados = {
+            { '9', '1' },
+            { '8', '2' },
+            { '7', '3' },
+            { '6', '4' },
+            { '5', '5' },
+            { '4', '6' },
+            { '3', '7' },
+            { '2', '8' }
+        };
+        paresSelecionados[4][1] = '0';
+
+        assertEquals(
+            "12345678",
+            autenticacao.validarSenhaPorPares(
+                "teste@example.com",
+                paresSelecionados));
+    }
+
+    @Test
+    public void deveValidarPinDeDezDigitosComUltimoDigitoNoSegundoLado()
+            throws Exception {
+        String pin = "1234567890";
+        UsuarioDAO usuarioDAO = new UsuarioDAO(connection);
+        usuarioDAO.inserir(
+            "Usuário de Teste",
+            "teste@example.com",
+            gerarHashRapidoParaTeste(pin),
+            new byte[] { 1, 2, 3 },
+            2
+        );
+        autenticacao = new AutenticacaoService(usuarioDAO);
+
+        char[][] paresSelecionados = new char[pin.length()][2];
+        for (int i = 0; i < pin.length(); i++) {
+            char digitoAlternativo =
+                (char) ('0' + (pin.charAt(i) - '0' + 1) % 10);
+            paresSelecionados[i][0] = pin.charAt(i);
+            paresSelecionados[i][1] = digitoAlternativo;
+        }
+        paresSelecionados[pin.length() - 1][0] = '1';
+        paresSelecionados[pin.length() - 1][1] = '0';
+
+        assertEquals(
+            pin,
+            autenticacao.validarSenhaPorPares(
+                "teste@example.com",
+                paresSelecionados));
+    }
+
+    @Test
+    public void deveContabilizarUmaFalhaQuandoNenhumaCombinacaoCorresponde()
+            throws Exception {
+        UsuarioDAO usuarioDAO = new UsuarioDAO(connection);
+        usuarioDAO.inserir(
+            "Usuário de Teste",
+            "teste@example.com",
+            gerarHashRapidoParaTeste("12345678"),
+            new byte[] { 1, 2, 3 },
+            2
+        );
+        autenticacao = new AutenticacaoService(usuarioDAO);
+        char[][] paresSelecionados = {
+            { '0', '9' },
+            { '3', '2' },
+            { '3', '9' },
+            { '4', '3' },
+            { '0', '5' },
+            { '4', '6' },
+            { '7', '6' },
+            { '6', '8' }
+        };
+
+        assertNull(
+            autenticacao.validarSenhaPorPares(
+                "teste@example.com",
+                paresSelecionados));
+        assertEquals(
+            1,
+            usuarioDAO.buscarPorEmail("teste@example.com").getFalhasSenha());
     }
 
     @Test

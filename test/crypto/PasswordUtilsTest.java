@@ -29,6 +29,15 @@ public class PasswordUtilsTest {
   }
 
   @Test
+  public void deveVerificarSenhaEmCharArraySemAlterarConteudo() {
+    char[] senha = "12345678".toCharArray();
+    String hash = PasswordUtils.gerarHash("12345678");
+
+    assertTrue(PasswordUtils.verificarSenha(senha, hash));
+    assertEquals("12345678", new String(senha));
+  }
+
+  @Test
   public void deveRejeitarSenhaIncorreta() {
     String hash = PasswordUtils.gerarHash("12345678");
 

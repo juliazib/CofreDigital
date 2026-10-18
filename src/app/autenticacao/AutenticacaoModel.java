@@ -5,7 +5,7 @@ import java.util.Arrays;
 public final class AutenticacaoModel {
 
   private String email;
-  private char[] senha;
+  private char[][] paresSenha;
   private String codigoTotp;
 
   public void preencherLogin(String email) {
@@ -16,13 +16,27 @@ public final class AutenticacaoModel {
     return email;
   }
 
-  public void preencherSenha(char[] senha) {
+  public void preencherParesSenha(char[][] paresSenha) {
     limparSenha();
-    this.senha = senha == null ? null : senha.clone();
+    if (paresSenha == null) {
+      return;
+    }
+    this.paresSenha = new char[paresSenha.length][];
+    for (int i = 0; i < paresSenha.length; i++) {
+      this.paresSenha[i] =
+          paresSenha[i] == null ? null : paresSenha[i].clone();
+    }
   }
 
-  public char[] getSenha() {
-    return senha == null ? null : senha.clone();
+  public char[][] getParesSenha() {
+    if (paresSenha == null) {
+      return null;
+    }
+    char[][] copia = new char[paresSenha.length][];
+    for (int i = 0; i < paresSenha.length; i++) {
+      copia[i] = paresSenha[i] == null ? null : paresSenha[i].clone();
+    }
+    return copia;
   }
 
   public void preencherCodigoTotp(String codigoTotp) {
@@ -34,9 +48,13 @@ public final class AutenticacaoModel {
   }
 
   public void limparSenha() {
-    if (senha != null) {
-      Arrays.fill(senha, '\0');
-      senha = null;
+    if (paresSenha != null) {
+      for (char[] par : paresSenha) {
+        if (par != null) {
+          Arrays.fill(par, '\0');
+        }
+      }
+      paresSenha = null;
     }
   }
 

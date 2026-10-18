@@ -35,14 +35,16 @@ public final class AutenticacaoWindow
 
   @Override
   public boolean solicitarSenha(AutenticacaoModel model) {
-    char[] senha = EntradaSenhaVirtual.solicitarSenha(owner, 8, 10);
-    if (senha == null) {
+    char[][] pares = EntradaSenhaVirtual.solicitarPares(owner, 8, 10);
+    if (pares == null) {
       return false;
     }
     try {
-      model.preencherSenha(senha);
+      model.preencherParesSenha(pares);
     } finally {
-      Arrays.fill(senha, '\0');
+      for (char[] par : pares) {
+        Arrays.fill(par, '\0');
+      }
     }
     return true;
   }

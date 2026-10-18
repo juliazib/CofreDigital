@@ -2,6 +2,7 @@
 package crypto;
 
 import java.security.SecureRandom;
+import java.util.Arrays;
 
 import org.bouncycastle.crypto.generators.OpenBSDBCrypt;
 
@@ -33,8 +34,21 @@ public final class PasswordUtils {
       return false;
     }
 
+    char[] caracteres = senha.toCharArray();
     try {
-      return OpenBSDBCrypt.checkPassword(hash, senha.toCharArray());
+      return verificarSenha(caracteres, hash);
+    } finally {
+      Arrays.fill(caracteres, '\0');
+    }
+  }
+
+  public static boolean verificarSenha(char[] senha, String hash) {
+    if (senha == null || hash == null) {
+      return false;
+    }
+
+    try {
+      return OpenBSDBCrypt.checkPassword(hash, senha);
     } catch (IllegalArgumentException e) {
       return false;
     }

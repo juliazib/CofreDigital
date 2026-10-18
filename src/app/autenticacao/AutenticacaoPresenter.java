@@ -108,20 +108,24 @@ public final class AutenticacaoPresenter {
         return null;
       }
 
-      char[] senhaCaracteres = model.getSenha();
+      char[][] paresSenha = model.getParesSenha();
       model.limparSenha();
-      if (senhaCaracteres == null) {
+      if (paresSenha == null) {
         return null;
       }
 
       String senha;
       try {
-        senha = new String(senhaCaracteres);
+        senha = service.validarSenhaPorPares(email, paresSenha);
       } finally {
-        Arrays.fill(senhaCaracteres, '\0');
+        for (char[] par : paresSenha) {
+          if (par != null) {
+            Arrays.fill(par, '\0');
+          }
+        }
       }
 
-      if (service.validarSenha(email, senha)) {
+      if (senha != null) {
         return senha;
       }
       if (exibirSeBloqueado(email)) {

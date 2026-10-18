@@ -12,21 +12,24 @@ public class AutenticacaoModelTest {
   @Test
   public void deveArmazenarDadosDeLoginEPermitirLimparSenha() {
     AutenticacaoModel model = new AutenticacaoModel();
-    char[] senha = "12345678".toCharArray();
+    char[][] pares = {
+        { '1', '9' },
+        { '2', '8' }
+    };
 
     model.preencherLogin("usuario@example.com");
-    model.preencherSenha(senha);
+    model.preencherParesSenha(pares);
     model.preencherCodigoTotp("123456");
-    senha[0] = '\0';
+    pares[0][0] = '\0';
 
     assertEquals("usuario@example.com", model.getEmail());
-    assertEquals('1', model.getSenha()[0]);
+    assertEquals('1', model.getParesSenha()[0][0]);
     assertEquals("123456", model.getCodigoTotp());
 
     model.limparSenha();
     model.limparCodigoTotp();
 
-    assertNull(model.getSenha());
+    assertNull(model.getParesSenha());
     assertNull(model.getCodigoTotp());
   }
 }

@@ -1,6 +1,7 @@
 package service;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 
 import crypto.PasswordUtils;
 import crypto.TOTP;
@@ -63,6 +64,77 @@ public class AutenticacaoService {
 
         usuarioDAO.limparFalhasDeSenha(usuario.getUid());
         return true;
+    }
+
+    public String validarSenhaPorPares(
+            String email,
+            char[][] pares) throws SQLException {
+        if (email == null || email.trim().isEmpty()) {
+            return null;
+        }
+
+        Usuario usuario = usuarioDAO.buscarPorEmail(email.trim());
+        if (usuario == null) {
+            return null;
+        }
+
+        long agora = System.currentTimeMillis();
+        if (usuario.estaBloqueado(agora)) {
+            return null;
+        }
+        usuarioDAO.limparBloqueioExpirado(usuario.getUid(), agora);
+
+        if (!paresValidos(pares)) {
+            usuarioDAO.registrarFalhaDeSenha(usuario.getUid(), agora);
+            return null;
+        }
+
+        String senhaValida = buscarSequencialmente(
+            1 << pares.length,
+            pares,
+            usuario.getSenhaHash());
+        if (senhaValida == null) {
+            usuarioDAO.registrarFalhaDeSenha(usuario.getUid(), agora);
+            return null;
+        }
+        usuarioDAO.limparFalhasDeSenha(usuario.getUid());
+        return senhaValida;
+    }
+
+    private static boolean paresValidos(char[][] pares) {
+        if (pares == null || pares.length < 8 || pares.length > 10) {
+            return false;
+        }
+        for (char[] par : pares) {
+            if (par == null || par.length != 2
+                    || par[0] < '0' || par[0] > '9'
+                    || par[1] < '0' || par[1] > '9'
+                    || par[0] == par[1]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static String buscarSequencialmente(
+            int quantidadeCandidatos,
+            char[][] pares,
+            String hash) {
+        char[] candidato = new char[pares.length];
+        try {
+            for (int indice = 0; indice < quantidadeCandidatos; indice++) {
+                for (int posicao = 0; posicao < pares.length; posicao++) {
+                    int bit = (indice >> (pares.length - posicao - 1)) & 1;
+                    candidato[posicao] = pares[posicao][bit];
+                }
+                if (PasswordUtils.verificarSenha(candidato, hash)) {
+                    return new String(candidato);
+                }
+            }
+            return null;
+        } finally {
+            Arrays.fill(candidato, '\0');
+        }
     }
 
     public boolean validarToken(

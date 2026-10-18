@@ -7,24 +7,20 @@ import static org.junit.Assert.fail;
 
 import java.awt.Component;
 import java.awt.Container;
-import java.awt.GridLayout;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EtchedBorder;
 
 import org.junit.Test;
 
-import app.ui.componentes.CampoSenha;
 import app.ui.componentes.CampoTexto;
 import app.ui.componentes.EntradaSenhaVirtual;
+import app.ui.componentes.CampoSenha;
 
 public class CamposSwingTest {
 
@@ -60,7 +56,7 @@ public class CamposSwingTest {
     EntradaSenhaVirtual entrada = new EntradaSenhaVirtual(8, 10);
 
     assertFalse(contemCampoTexto(entrada));
-    assertEquals(0, entrada.getPassword().length);
+    assertEquals(0, entrada.getParesSelecionados().length);
   }
 
   @Test
@@ -80,19 +76,27 @@ public class CamposSwingTest {
     EntradaSenhaVirtual entrada = new EntradaSenhaVirtual(1, 2);
     List<JButton> botoes = new ArrayList<>();
     coletarBotoes(entrada, botoes);
-    assertEquals(12, botoes.size());
-    assertEquals(5, contarPares(entrada));
+    assertEquals(7, botoes.size());
+    assertEquals(5, contarPares(botoes));
     validarDigitosUnicos(botoes);
 
-    JButton digito = botoes.stream()
-        .filter(botao -> botao.getActionCommand().matches("\\d"))
-        .findFirst()
-        .orElseThrow(AssertionError::new);
-    char esperado = digito.getActionCommand().charAt(0);
-    digito.doClick();
-
-    assertEquals(esperado, entrada.getPassword()[0]);
+    JButton primeiroPar = primeiroBotaoPar(botoes);
+    String esperado = primeiroPar.getActionCommand();
+    primeiroPar.doClick();
+    assertEquals(
+        esperado.replace(" ", ""),
+        new String(entrada.getParesSelecionados()[0]));
     assertTrue(encontrarMascara(entrada).getText().contains("\u2022"));
+    validarDigitosUnicos(botoes);
+
+    JButton segundoPar = primeiroBotaoPar(botoes);
+    String segundoEsperado = segundoPar.getActionCommand();
+    segundoPar.doClick();
+    char[][] pares = entrada.getParesSelecionados();
+    assertEquals(2, pares.length);
+    assertEquals(
+        segundoEsperado.replace(" ", ""),
+        new String(pares[1]));
 
     JButton limpar = botoes.stream()
         .filter(botao -> botao.getText().equals("LIMPAR"))
@@ -102,9 +106,38 @@ public class CamposSwingTest {
     assertTrue(mascara.getText().contains("\u2022"));
     limpar.doClick();
 
-    assertEquals(0, entrada.getPassword().length);
+    assertEquals(0, entrada.getParesSelecionados().length);
     assertEquals("", mascara.getText());
     validarDigitosUnicos(botoes);
+  }
+
+  private static JButton primeiroBotaoPar(List<JButton> botoes) {
+    return botoes.stream()
+        .filter(CamposSwingTest::ehPar)
+        .findFirst()
+        .orElseThrow(AssertionError::new);
+  }
+
+  @Test
+  public void tecladoVirtualDevePreservarCadaParSelecionado() {
+    EntradaSenhaVirtual entrada = new EntradaSenhaVirtual(8, 10);
+    List<JButton> botoes = new ArrayList<>();
+    coletarBotoes(entrada, botoes);
+    List<String> paresEsperados = new ArrayList<>();
+    for (int i = 0; i < 8; i++) {
+      JButton botaoPar = primeiroBotaoPar(botoes);
+      paresEsperados.add(botaoPar.getActionCommand());
+      botaoPar.doClick();
+    }
+
+    char[][] obtidos = entrada.getParesSelecionados();
+    assertEquals(8, obtidos.length);
+    for (int i = 0; i < obtidos.length; i++) {
+      assertEquals(
+          paresEsperados.get(i).replace(" ", ""),
+          new String(obtidos[i]));
+    }
+    entrada.limpar();
   }
 
   private static boolean contemCampoTexto(Component componente) {
@@ -138,35 +171,28 @@ public class CamposSwingTest {
     Set<String> digitos = new HashSet<>();
     for (JButton botao : botoes) {
       String valor = botao.getActionCommand();
-      if (valor != null && valor.matches("\\d")) {
-        digitos.add(valor);
+      if (ehPar(botao)) {
+        digitos.addAll(java.util.Arrays.asList(valor.split(" ")));
       }
     }
     assertEquals(10, digitos.size());
   }
 
   private static int contarPares(Container container) {
-    int quantidade = container instanceof JComponent
-        ? contarBordaPar(((JComponent) container).getBorder())
-        : 0;
-    for (Component componente : container.getComponents()) {
-      if (componente instanceof Container) {
-        quantidade += contarPares((Container) componente);
-      }
-    }
-    return quantidade;
+    List<JButton> botoes = new ArrayList<>();
+    coletarBotoes(container, botoes);
+    return contarPares(botoes);
   }
 
-  private static int contarBordaPar(javax.swing.border.Border border) {
-    if (border instanceof EtchedBorder) {
-      return 1;
-    }
-    if (border instanceof CompoundBorder) {
-      CompoundBorder composta = (CompoundBorder) border;
-      return contarBordaPar(composta.getOutsideBorder())
-          + contarBordaPar(composta.getInsideBorder());
-    }
-    return 0;
+  private static int contarPares(List<JButton> botoes) {
+    return (int) botoes.stream()
+        .filter(CamposSwingTest::ehPar)
+        .count();
+  }
+
+  private static boolean ehPar(JButton botao) {
+    String acao = botao.getActionCommand();
+    return acao != null && acao.matches("\\d \\d");
   }
 
   private static JLabel encontrarMascara(Container container) {
