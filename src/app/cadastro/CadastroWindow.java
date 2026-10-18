@@ -204,7 +204,9 @@ public final class CadastroWindow extends JDialog
   }
 
   @Override
-  public void limparCredenciais() {
+  public void limparFormulario() {
+    caminhoCertificado.limpar();
+    caminhoChavePrivada.limpar();
     senhaPessoal.limpar();
     confirmacaoSenha.limpar();
     fraseSecreta.limpar();

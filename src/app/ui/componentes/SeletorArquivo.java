@@ -29,4 +29,8 @@ public final class SeletorArquivo extends JPanel {
   public String getCaminho() {
     return caminho.getText();
   }
+
+  public void limpar() {
+    caminho.setText("");
+  }
 }

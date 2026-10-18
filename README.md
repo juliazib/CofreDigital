@@ -53,6 +53,11 @@ tela de saída registra a escolha entre encerrar sessão, encerrar sistema ou
 voltar ao menu (8001–8004). Encerrar a sessão registra 1004 e retorna à
 autenticação; encerrar o sistema também registra 1004, fecha a conexão e
 registra 1002.
+No menu principal, a opção 1 (cadastro de usuários) registra 5002 e a opção 2
+(pasta segura) registra 5003. O cadastro pelo menu cria usuários no grupo
+“Usuário”; erros preservam os campos preenchidos para correção e, após um
+cadastro bem-sucedido, o formulário permanece aberto e vazio para o próximo
+cadastro.
 No primeiro uso, depois que o cadastro inicial do administrador é concluído,
 a chave é validada e mantida em memória e a autenticação começa imediatamente.
 Ao encerrar uma sessão, a frase secreta e o contexto do administrador são

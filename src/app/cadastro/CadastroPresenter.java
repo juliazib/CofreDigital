@@ -27,7 +27,7 @@ public final class CadastroPresenter {
         throws Exception;
     void exibirSegredoTotp(String segredo);
     void exibirErro(String mensagem);
-    void limparCredenciais();
+    void limparFormulario();
     void habilitarCadastro(boolean habilitado);
     void fechar();
   }
@@ -87,6 +87,7 @@ public final class CadastroPresenter {
     char[] confirmacao = null;
     char[] fraseSecreta = null;
     byte[] chavePrivadaCifrada = null;
+    boolean cadastroConcluido = false;
 
     try {
       view.preencherModelo(model);
@@ -166,13 +167,16 @@ public final class CadastroPresenter {
               certificadoPem,
               chavePrivadaCifrada,
               fraseSecreta);
+      cadastroConcluido = true;
       view.exibirSegredoTotp(segredoTotp);
       if (model.isCadastroInicial()
           && aoConcluirCadastroInicial != null) {
         fraseSecretaCadastroConcluido = fraseSecreta.clone();
         cadastroInicialConcluido = true;
       }
-      view.fechar();
+      if (model.isCadastroInicial()) {
+        view.fechar();
+      }
     } catch (Exception erro) {
       if (erro instanceof ErroDeValidacao) {
         int codigoAuditoria =
@@ -187,17 +191,21 @@ public final class CadastroPresenter {
       limpar(senha);
       limpar(confirmacao);
       limpar(fraseSecreta);
-      model.limparFormulario();
+      if (cadastroConcluido) {
+        model.limparFormulario();
+        view.limparFormulario();
+      }
       if (chavePrivadaCifrada != null) {
         Arrays.fill(chavePrivadaCifrada, (byte) 0);
       }
-      view.limparCredenciais();
       view.habilitarCadastro(true);
     }
   }
 
   public void voltar() {
     if (model.isCadastroInicial() || registrarEvento(6010)) {
+      model.limparFormulario();
+      view.limparFormulario();
       view.fechar();
     }
   }

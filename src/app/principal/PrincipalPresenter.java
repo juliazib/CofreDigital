@@ -72,7 +72,7 @@ public final class PrincipalPresenter {
       throw new IllegalStateException(
           "A janela principal ainda não foi aberta.");
     }
-    registrarEvento(5003);
+    registrarEvento(5002);
     CadastroPresenter cadastro = new CadastroPresenter(
         connection,
         CadastroModel.cadastroDeUsuario(
@@ -89,7 +89,7 @@ public final class PrincipalPresenter {
       throw new IllegalStateException(
           "O contexto do administrador não está disponível.");
     }
-    registrarEvento(5002);
+    registrarEvento(5003);
     PastaSeguraWindow consulta = new PastaSeguraWindow(
         janela,
         connection,
