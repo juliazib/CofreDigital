@@ -20,13 +20,13 @@ import org.junit.Test;
 
 import database.DatabaseSchema;
 import database.UsuarioDAO;
-import service.CadastroAdministradorService;
+import service.CadastroService;
 import service.CertificadoChaveService;
 
-public class CadastroAdministradorServiceTest {
+public class CadastroServiceAdministradorTest {
 
   private Connection connection;
-  private CadastroAdministradorService service;
+  private CadastroService service;
   private UsuarioDAO usuarioDAO;
 
   @Before
@@ -36,7 +36,7 @@ public class CadastroAdministradorServiceTest {
       statement.execute("PRAGMA foreign_keys = ON");
     }
     DatabaseSchema.createTables(connection);
-    service = new CadastroAdministradorService(connection);
+    service = new CadastroService(connection);
     usuarioDAO = new UsuarioDAO(connection);
   }
 
@@ -50,7 +50,7 @@ public class CadastroAdministradorServiceTest {
       throws Exception {
     assertThrows(
         IllegalArgumentException.class,
-        () -> service.cadastrar(
+        () -> service.cadastrarAdministrador(
             "12341234".toCharArray(),
             "12341234".toCharArray(),
             null,
@@ -63,7 +63,7 @@ public class CadastroAdministradorServiceTest {
   public void deveRejeitarSenhaQueNaoSejaNumerica() throws Exception {
     assertThrows(
         IllegalArgumentException.class,
-        () -> service.cadastrar(
+        () -> service.cadastrarAdministrador(
             "1234abcd".toCharArray(),
             "1234abcd".toCharArray(),
             null,
@@ -84,7 +84,7 @@ public class CadastroAdministradorServiceTest {
 
     assertThrows(
         IllegalStateException.class,
-        () -> service.cadastrar(
+        () -> service.cadastrarAdministrador(
             "12345678".toCharArray(),
             "12345678".toCharArray(),
             null,

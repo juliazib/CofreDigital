@@ -2,12 +2,13 @@ package app;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
+import app.cadastro.CadastroModel;
+import app.cadastro.CadastroPresenter;
 import database.Database;
 import database.DatabaseSchema;
 import database.UsuarioDAO;
@@ -31,15 +32,10 @@ public class Main {
           return;
         }
 
-        CadastroWindow janela =
-            new CadastroWindow(conexaoAplicacao, totalUsuarios);
-        janela.addWindowListener(new WindowAdapter() {
-          @Override
-          public void windowClosed(WindowEvent evento) {
-            fecharConexao(conexaoAplicacao);
-          }
-        });
-        janela.setVisible(true);
+        CadastroPresenter cadastro = new CadastroPresenter(
+            conexaoAplicacao,
+            CadastroModel.cadastroInicial(totalUsuarios));
+        cadastro.abrir(null, () -> fecharConexao(conexaoAplicacao));
       });
     } catch (SQLException e) {
       System.err.println(
@@ -52,28 +48,41 @@ public class Main {
     InicializacaoPresenter presenter = new InicializacaoPresenter(
         connection,
         new SwingInicializacaoView(null));
-    try (ContextoAdministrador contexto = presenter.validarAdministrador()) {
-      if (contexto == null) {
-        return;
-      }
+    ContextoAdministrador contexto = presenter.validarAdministrador();
+    if (contexto == null) {
+      fecharConexao(connection);
+      return;
+    }
 
+    AtomicBoolean recursosEncerrados = new AtomicBoolean();
+    Runnable encerrarSessao = () -> {
+      if (recursosEncerrados.compareAndSet(false, true)) {
+        contexto.close();
+        fecharConexao(connection);
+      }
+    };
+    boolean sessaoIniciada = false;
+    try {
       SwingAutenticacaoView view = new SwingAutenticacaoView(null);
       AutenticacaoPresenter autenticacao =
           new AutenticacaoPresenter(connection, view);
-      try {
-        Usuario usuario = autenticacao.autenticar();
-        if (usuario != null) {
-          view.exibirAutenticacaoConcluida(usuario.getNome());
-        }
-      } catch (SQLException erro) {
-        JOptionPane.showMessageDialog(
-            null,
-            "Erro durante a autenticação: " + erro.getMessage(),
-            "Erro de autenticação",
-            JOptionPane.ERROR_MESSAGE);
+      Usuario usuario = autenticacao.autenticar();
+      if (usuario != null) {
+        JanelaPrincipal janela =
+            new JanelaPrincipal(usuario, connection, encerrarSessao);
+        janela.setVisible(true);
+        sessaoIniciada = true;
       }
+    } catch (SQLException erro) {
+      JOptionPane.showMessageDialog(
+          null,
+          "Erro durante a autenticação: " + erro.getMessage(),
+          "Erro de autenticação",
+          JOptionPane.ERROR_MESSAGE);
     } finally {
-      fecharConexao(connection);
+      if (!sessaoIniciada) {
+        encerrarSessao.run();
+      }
     }
   }
 

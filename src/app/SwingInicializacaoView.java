@@ -1,10 +1,10 @@
 package app;
 
 import java.awt.Window;
-import java.util.Arrays;
 
 import javax.swing.JOptionPane;
-import javax.swing.JPasswordField;
+
+import app.ui.componentes.CampoSenha;
 
 public final class SwingInicializacaoView
     implements InicializacaoPresenter.View {
@@ -17,7 +17,7 @@ public final class SwingInicializacaoView
 
   @Override
   public char[] solicitarFraseSecreta() {
-    JPasswordField campoSenha = new JPasswordField(24);
+    CampoSenha campoSenha = new CampoSenha(24, 255);
     int opcao = JOptionPane.showConfirmDialog(
         owner,
         new Object[] {
@@ -29,12 +29,12 @@ public final class SwingInicializacaoView
         JOptionPane.PLAIN_MESSAGE);
 
     if (opcao != JOptionPane.OK_OPTION) {
-      limparCampo(campoSenha);
+      campoSenha.limpar();
       return null;
     }
 
     char[] fraseSecreta = campoSenha.getPassword();
-    limparCampo(campoSenha);
+    campoSenha.limpar();
     return fraseSecreta;
   }
 
@@ -57,9 +57,4 @@ public final class SwingInicializacaoView
         JOptionPane.INFORMATION_MESSAGE);
   }
 
-  private static void limparCampo(JPasswordField campo) {
-    char[] conteudo = campo.getPassword();
-    Arrays.fill(conteudo, '\0');
-    campo.setText("");
-  }
 }
