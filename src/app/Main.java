@@ -11,6 +11,7 @@ import javax.swing.SwingUtilities;
 import database.Database;
 import database.DatabaseSchema;
 import database.UsuarioDAO;
+import model.Usuario;
 import service.ContextoAdministrador;
 
 public class Main {
@@ -52,6 +53,25 @@ public class Main {
         connection,
         new SwingInicializacaoView(null));
     try (ContextoAdministrador contexto = presenter.validarAdministrador()) {
+      if (contexto == null) {
+        return;
+      }
+
+      SwingAutenticacaoView view = new SwingAutenticacaoView(null);
+      AutenticacaoPresenter autenticacao =
+          new AutenticacaoPresenter(connection, view);
+      try {
+        Usuario usuario = autenticacao.autenticar();
+        if (usuario != null) {
+          view.exibirAutenticacaoConcluida(usuario.getNome());
+        }
+      } catch (SQLException erro) {
+        JOptionPane.showMessageDialog(
+            null,
+            "Erro durante a autenticação: " + erro.getMessage(),
+            "Erro de autenticação",
+            JOptionPane.ERROR_MESSAGE);
+      }
     } finally {
       fecharConexao(connection);
     }

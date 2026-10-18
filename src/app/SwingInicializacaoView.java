@@ -52,7 +52,7 @@ public final class SwingInicializacaoView
     JOptionPane.showMessageDialog(
         owner,
         "A chave privada do administrador foi validada. " +
-            "A autenticação ainda não está disponível nesta etapa.",
+            "O sistema iniciará a autenticação de usuários.",
         "Inicialização validada",
         JOptionPane.INFORMATION_MESSAGE);
   }
