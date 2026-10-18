@@ -22,6 +22,7 @@ import org.junit.Test;
 
 import database.ChaveiroDAO;
 import database.DatabaseSchema;
+import database.RegistroDAO;
 import database.UsuarioDAO;
 import model.ArquivoSeguro;
 import model.Usuario;
@@ -118,6 +119,89 @@ public class PastaSeguraServiceTest {
   }
 
   @Test
+  public void deveRegistrarEventosDeSucessoAoListarArquivos()
+      throws Exception {
+    service.listarArquivos(
+        pastaTemporaria,
+        usuario01,
+        "user01".toCharArray());
+
+    assertEquals(1, contarEvento(usuario01, 7005));
+    assertEquals(1, contarEvento(usuario01, 7006));
+    assertEquals(1, contarEvento(usuario01, 7010));
+    assertEquals(1, contarEvento(usuario01, 7011));
+    assertEquals(1, contarEvento(usuario01, 7009));
+    assertEquals(1, contarEvento(usuario01, 7014));
+  }
+
+  @Test
+  public void deveRegistrarFalhaDeVerificacaoDoIndiceAdulterado()
+      throws Exception {
+    Path assinatura = pastaTemporaria.resolve("index.asd");
+    byte[] original = Files.readAllBytes(assinatura);
+    Files.write(assinatura, new byte[] { 1, 2, 3 });
+
+    assertThrows(
+        GeneralSecurityException.class,
+        () -> service.listarArquivos(
+            pastaTemporaria,
+            usuario01,
+            "user01".toCharArray()));
+
+    Files.write(assinatura, original);
+    assertEquals(1, contarEvento(usuario01, 7005));
+    assertEquals(1, contarEvento(usuario01, 7008));
+    assertEquals(0, contarEvento(usuario01, 7006));
+  }
+
+  @Test
+  public void deveRegistrarEventosDeAcessoEDescriptografiaDoArquivo()
+      throws Exception {
+    service.descriptografarArquivo(
+        pastaTemporaria,
+        usuario01,
+        "user01".toCharArray(),
+        "XXYYZZ22");
+
+    assertEquals(1, contarEvento(usuario01, 7016));
+    assertEquals(1, contarEvento(usuario01, 7018));
+    assertEquals(1, contarEvento(usuario01, 7019));
+  }
+
+  @Test
+  public void deveRegistrarAcessoNegadoParaArquivoSemEnvelopeDoUsuario()
+      throws Exception {
+    assertThrows(
+        SecurityException.class,
+        () -> service.descriptografarArquivo(
+            pastaTemporaria,
+            usuario02,
+            "user02".toCharArray(),
+            "XXYYZZ11"));
+
+    assertEquals(1, contarEvento(usuario02, 7017));
+    assertEquals(0, contarEvento(usuario02, 7016));
+  }
+
+  @Test
+  public void deveRegistrarCaminhoInvalidoDaPastaSegura() throws Exception {
+    assertThrows(
+        IOException.class,
+        () -> service.listarArquivos(
+            pastaTemporaria.resolve("inexistente"),
+            usuario01,
+            "user01".toCharArray()));
+
+    assertEquals(1, contarEvento(usuario01, 7004));
+  }
+
+  private int contarEvento(Usuario usuario, int codigo) throws Exception {
+    return new RegistroDAO(connection).contarEventos(
+        usuario.getUid(),
+        codigo);
+  }
+
+  @Test
   public void deveRejeitarFraseSecretaIncorretaAntesDaListagem() {
     assertThrows(
         GeneralSecurityException.class,
@@ -155,6 +239,10 @@ public class PastaSeguraServiceTest {
             pastaTemporaria,
             usuario01,
             "user01".toCharArray()));
+
+    assertEquals(1, contarEvento(usuario01, 7010));
+    assertEquals(1, contarEvento(usuario01, 7013));
+    assertEquals(0, contarEvento(usuario01, 7011));
   }
 
   @Test
@@ -230,6 +318,9 @@ public class PastaSeguraServiceTest {
             usuario01,
             "user01".toCharArray(),
             "XXYYZZ22"));
+
+    assertEquals(1, contarEvento(usuario01, 7021));
+    assertEquals(0, contarEvento(usuario01, 7019));
   }
 
   @Test
@@ -246,6 +337,28 @@ public class PastaSeguraServiceTest {
             usuario01,
             "user01".toCharArray(),
             "XXYYZZ22"));
+
+    assertEquals(1, contarEvento(usuario01, 7021));
+    assertEquals(1, contarEvento(usuario01, 7018));
+  }
+
+  @Test
+  public void deveRegistrarFalhaQuandoCriptogramaNaoPodeSerDecriptado()
+      throws Exception {
+    Files.write(
+        pastaTemporaria.resolve("XXYYZZ22.enc"),
+        new byte[] { 1 });
+
+    assertThrows(
+        GeneralSecurityException.class,
+        () -> service.descriptografarArquivo(
+            pastaTemporaria,
+            usuario01,
+            "user01".toCharArray(),
+            "XXYYZZ22"));
+
+    assertEquals(1, contarEvento(usuario01, 7020));
+    assertEquals(0, contarEvento(usuario01, 7018));
   }
 
   @Test

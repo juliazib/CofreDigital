@@ -39,6 +39,7 @@ public final class PastaSeguraWindow
   private final TabelaArquivosSeguros tabela = new TabelaArquivosSeguros();
   private final JButton descriptografar =
       new JButton("Descriptografar selecionado");
+  private int totalConsultas;
 
   public PastaSeguraWindow(
       Window owner,
@@ -57,6 +58,7 @@ public final class PastaSeguraWindow
     setContentPane(criarConteudo());
     pack();
     setLocationRelativeTo(owner);
+    presenter.registrarTelaApresentada();
   }
 
   private JPanel criarConteudo() {
@@ -95,7 +97,10 @@ public final class PastaSeguraWindow
     descriptografar.addActionListener(
         evento -> descriptografarSelecionado());
     JButton voltar = new JButton("Voltar");
-    voltar.addActionListener(evento -> dispose());
+    voltar.addActionListener(evento -> {
+      presenter.registrarVoltar();
+      dispose();
+    });
     botoes.add(listar);
     botoes.add(descriptografar);
     botoes.add(voltar);
@@ -134,12 +139,14 @@ public final class PastaSeguraWindow
     String caminho = campoPasta.getText().trim();
     char[] frase = campoFrase.getPassword();
     try {
-      if (caminho.isEmpty()) {
-        throw new IllegalArgumentException(
-            "Selecione o caminho da pasta segura.");
+      if (!presenter.registrarListarPressionado()) {
+        return;
       }
-      presenter.listarArquivos(Paths.get(caminho), frase);
+      presenter.listarArquivos(
+          caminho.isEmpty() ? null : Paths.get(caminho),
+          frase);
     } catch (IllegalArgumentException erro) {
+      presenter.registrarCaminhoInvalido();
       exibirErro(erro.getMessage());
     } finally {
       java.util.Arrays.fill(frase, '\0');
@@ -163,7 +170,7 @@ public final class PastaSeguraWindow
   private void limparTabela() {
     tabela.limpar();
     descriptografar.setEnabled(false);
-    resumo.setText("Arquivos acessíveis: —");
+    atualizarResumo("—");
   }
 
   private void invalidarConsulta() {
@@ -175,7 +182,7 @@ public final class PastaSeguraWindow
   public void exibirArquivos(List<ArquivoSeguro> arquivos) {
     tabela.exibirArquivos(arquivos);
     descriptografar.setEnabled(!arquivos.isEmpty());
-    resumo.setText("Arquivos acessíveis: " + arquivos.size());
+    atualizarResumo(Integer.toString(arquivos.size()));
     if (arquivos.isEmpty()) {
       JOptionPane.showMessageDialog(
           this,
@@ -202,6 +209,18 @@ public final class PastaSeguraWindow
         "Arquivo descriptografado em:\n" + arquivo,
         "Pasta segura",
         JOptionPane.INFORMATION_MESSAGE);
+  }
+
+  @Override
+  public void atualizarTotalConsultas(int total) {
+    totalConsultas = total;
+    atualizarResumo("—");
+  }
+
+  private void atualizarResumo(String quantidadeArquivos) {
+    resumo.setText(
+        "Arquivos acessíveis: " + quantidadeArquivos
+            + " | Consultas realizadas: " + totalConsultas);
   }
 
   @Override

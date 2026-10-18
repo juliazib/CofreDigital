@@ -131,19 +131,7 @@ public class UsuarioDAO {
   }
 
   public int contarAcessos(int uid) throws SQLException {
-    String sql = "SELECT COUNT(*) " +
-        "FROM Registros r " +
-        "JOIN Mensagens m ON m.MID = r.MID " +
-        "WHERE r.UID = ? AND m.codigo = 1003";
-
-    try (PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setInt(1, uid);
-
-      try (ResultSet result = statement.executeQuery()) {
-        result.next();
-        return result.getInt(1);
-      }
-    }
+    return new RegistroDAO(connection).contarEventos(uid, 1003);
   }
 
   public void limparFalhasDeSenha(int uid) throws SQLException {

@@ -38,6 +38,8 @@ public final class PrincipalWindow extends JFrame {
     cabecalho.add(new JLabel("Nome: " + model.getNomeUsuario()));
     cabecalho.add(new JLabel("E-mail: " + model.getEmailUsuario()));
     cabecalho.add(new JLabel("Grupo: " + model.getGrupoUsuario()));
+    cabecalho.add(new JLabel(
+        "Acessos realizados: " + presenter.getTotalAcessos()));
     conteudo.add(cabecalho, BorderLayout.NORTH);
 
     JPanel funcionalidades = new JPanel(new GridLayout(0, 1, 8, 8));

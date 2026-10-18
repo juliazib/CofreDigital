@@ -4,10 +4,12 @@ import java.awt.Window;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.sql.Connection;
+import java.sql.SQLException;
 
 import app.cadastro.CadastroModel;
 import app.cadastro.CadastroPresenter;
 import app.pastasegura.PastaSeguraWindow;
+import database.UsuarioDAO;
 import service.ContextoAdministrador;
 
 public final class PrincipalPresenter {
@@ -15,21 +17,24 @@ public final class PrincipalPresenter {
   private final Connection connection;
   private final PrincipalModel model;
   private final ContextoAdministrador contextoAdministrador;
+  private final int totalAcessos;
   private PrincipalWindow janela;
 
   public PrincipalPresenter(
       Connection connection,
-      PrincipalModel model) {
+      PrincipalModel model) throws SQLException {
     this(connection, model, null);
   }
 
   public PrincipalPresenter(
       Connection connection,
       PrincipalModel model,
-      ContextoAdministrador contextoAdministrador) {
+      ContextoAdministrador contextoAdministrador) throws SQLException {
     this.connection = connection;
     this.model = model;
     this.contextoAdministrador = contextoAdministrador;
+    totalAcessos = new UsuarioDAO(connection).contarAcessos(
+        model.getUsuarioAutenticado().getUid());
   }
 
   public void abrir(Window owner, Runnable aoEncerrarSessao) {
@@ -84,6 +89,10 @@ public final class PrincipalPresenter {
 
   boolean podeConsultarPastaSegura() {
     return contextoAdministrador != null;
+  }
+
+  int getTotalAcessos() {
+    return totalAcessos;
   }
 
   public void encerrarSessao() {

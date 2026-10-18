@@ -17,8 +17,10 @@ import app.principal.PrincipalModel;
 import app.principal.PrincipalPresenter;
 import database.Database;
 import database.DatabaseSchema;
+import database.RegistroDAO;
 import database.UsuarioDAO;
 import model.Usuario;
+import service.AuditoriaService;
 import service.ContextoAdministrador;
 
 public final class CofreDigital {
@@ -81,6 +83,20 @@ public final class CofreDigital {
           new AutenticacaoModel());
       Usuario usuario = autenticacao.abrir(null);
       if (usuario != null) {
+        try {
+          new AuditoriaService(new RegistroDAO(connection))
+              .registrarAcesso(usuario.getUid());
+        } catch (SQLException erro) {
+          System.err.println(
+              "Erro ao registrar o início da sessão: " + erro.getMessage());
+          JOptionPane.showMessageDialog(
+              null,
+              "Não foi possível registrar o acesso. A sessão não será iniciada.",
+              "Auditoria indisponível",
+              JOptionPane.ERROR_MESSAGE);
+          return;
+        }
+
         PrincipalPresenter janelaPrincipal =
             new PrincipalPresenter(
                 connection,
