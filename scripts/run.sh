@@ -7,4 +7,11 @@ PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 
 cd "$PROJECT_ROOT"
 
-exec java -cp "bin:lib/*" app.Main
+CLASSPATH="bin:lib/*"
+ATK_WRAPPER="/usr/share/java/java-atk-wrapper.jar"
+
+if [[ -f "$ATK_WRAPPER" ]]; then
+    CLASSPATH="$CLASSPATH:$ATK_WRAPPER"
+fi
+
+exec java -cp "$CLASSPATH" app.Main

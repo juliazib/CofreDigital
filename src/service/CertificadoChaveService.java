@@ -3,12 +3,18 @@ package service;
 import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Security;
+import java.security.SecureRandom;
+import java.security.Signature;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMDecryptorProvider;
 import org.bouncycastle.openssl.PEMEncryptedKeyPair;
 import org.bouncycastle.openssl.PEMKeyPair;
@@ -19,6 +25,8 @@ import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
 import org.bouncycastle.pkcs.PKCS8EncryptedPrivateKeyInfo;
 
 public class CertificadoChaveService {
+
+  private static final int TAMANHO_DESAFIO_CADASTRO = 10_240;
 
   /**
    * Valida um certificado X.509 a partir de sua representação em string PEM.
@@ -41,6 +49,36 @@ public class CertificadoChaveService {
     }
   }
 
+  public static boolean validarParChaves(
+      PrivateKey chavePrivada,
+      X509Certificate certificado) throws GeneralSecurityException {
+    if (certificado == null) {
+      throw new IllegalArgumentException("O certificado não pode ser nulo.");
+    }
+    return validarParChaves(chavePrivada, certificado.getPublicKey());
+  }
+
+  private static boolean validarParChaves(
+      PrivateKey chavePrivada,
+      PublicKey chavePublica) throws GeneralSecurityException {
+    if (chavePrivada == null || chavePublica == null) {
+      throw new IllegalArgumentException(
+          "As chaves privada e pública não podem ser nulas.");
+    }
+
+    byte[] desafio = new byte[TAMANHO_DESAFIO_CADASTRO];
+    new SecureRandom().nextBytes(desafio);
+
+    Signature assinatura = Signature.getInstance("SHA1withRSA");
+    assinatura.initSign(chavePrivada);
+    assinatura.update(desafio);
+    byte[] assinaturaDigital = assinatura.sign();
+
+    assinatura.initVerify(chavePublica);
+    assinatura.update(desafio);
+    return assinatura.verify(assinaturaDigital);
+  }
+
   /**
    * Descriptografa a chave privada (PKCS#8 cifrada ou PEM tradicional cifrado)
    * usando a frase secreta.
@@ -51,6 +89,10 @@ public class CertificadoChaveService {
     }
     if (senha == null) {
       throw new IllegalArgumentException("A senha para descriptografar a chave privada não pode ser nula.");
+    }
+
+    if (Security.getProvider("BC") == null) {
+      Security.addProvider(new BouncyCastleProvider());
     }
 
     try (PEMParser pemParser = new PEMParser(new InputStreamReader(
