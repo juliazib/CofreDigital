@@ -38,12 +38,51 @@ public class CadastroModelTest {
         0,
         null);
 
-    CadastroModel model = CadastroModel.cadastroDeUsuario(administrador);
+    CadastroModel model = CadastroModel.cadastroDeUsuario(administrador, 4);
 
     assertFalse(model.isCadastroInicial());
     assertEquals(7, model.getUidAdministrador());
-    assertEquals("Administrador: Admin", model.getDescricao());
+    assertEquals("Total de usuários do sistema: 4", model.getDescricao());
+    assertEquals("admin@example.com", model.getLoginAdministrador());
+    assertEquals("Admin", model.getNomeAdministrador());
+    assertEquals("Administrador", model.getGrupoAdministrador());
+    assertEquals(4, model.getTotalUsuarios());
     assertEquals("Usuário", model.getGrupoNovoUsuario());
+    model.registrarUsuarioCadastrado();
+    assertEquals("Total de usuários do sistema: 5", model.getDescricao());
+  }
+
+  @Test
+  public void devePermitirSelecionarGrupoNoCadastroDeUsuario() {
+    Usuario administrador = new Usuario(
+        7,
+        "Admin",
+        "admin@example.com",
+        "hash",
+        new byte[] { 1 },
+        1,
+        1,
+        "Administrador",
+        0,
+        0,
+        null);
+    CadastroModel model = CadastroModel.cadastroDeUsuario(administrador, 2);
+
+    model.setGrupoNovoUsuario("Administrador");
+
+    assertEquals("Administrador", model.getGrupoNovoUsuario());
+    assertEquals(1, model.getGidNovoUsuario());
+    model.setGrupoNovoUsuario("Usuário");
+    assertEquals(2, model.getGidNovoUsuario());
+  }
+
+  @Test
+  public void deveRejeitarGrupoDesconhecidoNoCadastro() {
+    CadastroModel model = CadastroModel.cadastroInicial(0);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> model.setGrupoNovoUsuario("Outro"));
   }
 
   @Test
@@ -63,7 +102,7 @@ public class CadastroModelTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> CadastroModel.cadastroDeUsuario(usuario));
+        () -> CadastroModel.cadastroDeUsuario(usuario, 2));
   }
 
   @Test

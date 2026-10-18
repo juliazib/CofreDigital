@@ -58,6 +58,24 @@ public final class CadastroService {
       String certificadoPem,
       byte[] chavePrivadaCifrada,
       char[] fraseSecreta) throws Exception {
+    return cadastrarUsuario(
+        uidAdministrador,
+        2,
+        senha,
+        confirmacaoSenha,
+        certificadoPem,
+        chavePrivadaCifrada,
+        fraseSecreta);
+  }
+
+  public String cadastrarUsuario(
+      int uidAdministrador,
+      int gid,
+      char[] senha,
+      char[] confirmacaoSenha,
+      String certificadoPem,
+      byte[] chavePrivadaCifrada,
+      char[] fraseSecreta) throws Exception {
     if (uidAdministrador <= 0) {
       throw new SecurityException(
           "Somente um administrador pode cadastrar usuários.");
@@ -73,7 +91,7 @@ public final class CadastroService {
         certificadoPem,
         chavePrivadaCifrada,
         fraseSecreta,
-        2);
+        gid);
   }
 
   private String cadastrarComCertificado(

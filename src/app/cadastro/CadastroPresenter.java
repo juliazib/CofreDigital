@@ -28,6 +28,7 @@ public final class CadastroPresenter {
     void exibirSegredoTotp(String segredo);
     void exibirErro(String mensagem);
     void limparFormulario();
+    void atualizarTotalUsuarios(int total);
     void habilitarCadastro(boolean habilitado);
     void fechar();
   }
@@ -162,12 +163,15 @@ public final class CadastroPresenter {
               fraseSecreta)
           : cadastroService.cadastrarUsuario(
               model.getUidAdministrador(),
+              model.getGidNovoUsuario(),
               senha,
               confirmacao,
               certificadoPem,
               chavePrivadaCifrada,
               fraseSecreta);
       cadastroConcluido = true;
+      model.registrarUsuarioCadastrado();
+      view.atualizarTotalUsuarios(model.getTotalUsuarios());
       view.exibirSegredoTotp(segredoTotp);
       if (model.isCadastroInicial()
           && aoConcluirCadastroInicial != null) {

@@ -35,11 +35,12 @@ public final class PastaSeguraWindow
   private final PastaSeguraPresenter presenter;
   private final CampoTexto campoPasta = new CampoTexto(32, 255);
   private final CampoSenha campoFrase = new CampoSenha(24, 255);
+  private final JLabel totalConsulta =
+      new JLabel("Total de consultas do usuário: 0");
   private final JLabel resumo = new JLabel("Arquivos acessíveis: —");
   private final TabelaArquivosSeguros tabela = new TabelaArquivosSeguros();
   private final JButton descriptografar =
       new JButton("Descriptografar selecionado");
-  private int totalConsultas;
 
   public PastaSeguraWindow(
       Window owner,
@@ -69,7 +70,12 @@ public final class PastaSeguraWindow
     cabecalho.add(new JLabel("Login: " + model.getUsuario().getEmail()));
     cabecalho.add(new JLabel("Grupo: " + model.getUsuario().getGrupo()));
     cabecalho.add(new JLabel("Nome: " + model.getUsuario().getNome()));
-    cabecalho.add(resumo);
+    conteudo.add(cabecalho, BorderLayout.NORTH);
+
+    JPanel corpos = new JPanel(new BorderLayout(8, 8));
+    JPanel corpo1 = new JPanel(new BorderLayout());
+    corpo1.add(totalConsulta, BorderLayout.WEST);
+    corpos.add(corpo1, BorderLayout.NORTH);
 
     JPanel formulario = new JPanel(new GridLayout(0, 1, 6, 6));
     formulario.setBorder(BorderFactory.createTitledBorder("Pasta segura"));
@@ -83,12 +89,12 @@ public final class PastaSeguraWindow
     formulario.add(new JLabel("Frase secreta da chave privada:"));
     formulario.add(campoFrase);
 
-    JPanel topo = new JPanel(new BorderLayout(8, 8));
-    topo.add(cabecalho, BorderLayout.NORTH);
-    topo.add(formulario, BorderLayout.CENTER);
-    conteudo.add(topo, BorderLayout.NORTH);
-
-    conteudo.add(tabela, BorderLayout.CENTER);
+    JPanel corpo2 = new JPanel(new BorderLayout(8, 8));
+    corpo2.add(formulario, BorderLayout.NORTH);
+    JPanel tabelaComResumo = new JPanel(new BorderLayout(4, 4));
+    tabelaComResumo.add(resumo, BorderLayout.NORTH);
+    tabelaComResumo.add(tabela, BorderLayout.CENTER);
+    corpo2.add(tabelaComResumo, BorderLayout.CENTER);
 
     JPanel botoes = new JPanel(new FlowLayout(FlowLayout.RIGHT));
     JButton listar = new JButton("Listar");
@@ -104,7 +110,9 @@ public final class PastaSeguraWindow
     botoes.add(listar);
     botoes.add(descriptografar);
     botoes.add(voltar);
-    conteudo.add(botoes, BorderLayout.SOUTH);
+    corpo2.add(botoes, BorderLayout.SOUTH);
+    corpos.add(corpo2, BorderLayout.CENTER);
+    conteudo.add(corpos, BorderLayout.CENTER);
     campoPasta.getDocument().addDocumentListener(new DocumentListener() {
       @Override
       public void insertUpdate(DocumentEvent evento) {
@@ -213,14 +221,12 @@ public final class PastaSeguraWindow
 
   @Override
   public void atualizarTotalConsultas(int total) {
-    totalConsultas = total;
+    totalConsulta.setText("Total de consultas do usuário: " + total);
     atualizarResumo("—");
   }
 
   private void atualizarResumo(String quantidadeArquivos) {
-    resumo.setText(
-        "Arquivos acessíveis: " + quantidadeArquivos
-            + " | Consultas realizadas: " + totalConsultas);
+    resumo.setText("Arquivos acessíveis: " + quantidadeArquivos);
   }
 
   @Override

@@ -3,7 +3,10 @@ package app.principal;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.Window;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -14,18 +17,20 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.SwingConstants;
 
 public final class PrincipalWindow extends JFrame {
+
+  private final PrincipalModel model;
 
   PrincipalWindow(
       Window owner,
       PrincipalModel model,
       PrincipalPresenter presenter) {
     super("Cofre Digital");
+    this.model = model;
     setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-    setMinimumSize(new Dimension(520, 340));
-    setSize(600, 400);
+    setMinimumSize(new Dimension(560, 420));
+    setSize(640, 460);
     setLocationRelativeTo(owner);
     setContentPane(criarConteudo(model, presenter));
     addWindowListener(new WindowAdapter() {
@@ -42,52 +47,70 @@ public final class PrincipalWindow extends JFrame {
     JPanel conteudo = new JPanel(new BorderLayout(12, 12));
     conteudo.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
 
-    JPanel cabecalho = new JPanel(new GridLayout(0, 1, 4, 4));
-    cabecalho.add(new JLabel("Sessão autenticada"));
-    cabecalho.add(new JLabel("Nome: " + model.getNomeUsuario()));
-    cabecalho.add(new JLabel("E-mail: " + model.getEmailUsuario()));
-    cabecalho.add(new JLabel("Grupo: " + model.getGrupoUsuario()));
-    cabecalho.add(new JLabel(
-        "Acessos realizados: " + presenter.getTotalAcessos()));
-    conteudo.add(cabecalho, BorderLayout.NORTH);
+    conteudo.add(criarCabecalho(model), BorderLayout.NORTH);
+    JPanel corpo1 = new JPanel(new BorderLayout());
+    corpo1.add(new JLabel(
+        "Total de acessos do usuário: " + presenter.getTotalAcessos()),
+        BorderLayout.WEST);
 
-    JPanel funcionalidades = new JPanel(new GridLayout(0, 1, 8, 8));
-    funcionalidades.setBorder(
-        BorderFactory.createTitledBorder("Funcionalidades"));
-    JButton pastaSegura = new JButton("Pasta segura");
-    pastaSegura.setEnabled(presenter.podeConsultarPastaSegura());
-    if (!presenter.podeConsultarPastaSegura()) {
-      pastaSegura.setToolTipText(
-          "O contexto seguro do administrador não está disponível.");
-    }
-    pastaSegura.addActionListener(
-        evento -> executarAcao(() -> presenter.consultarPastaSegura()));
-    funcionalidades.add(pastaSegura);
-
+    JPanel menu = new JPanel(new GridBagLayout());
+    int linhaMenu = 0;
     if (model.podeGerenciarUsuarios()) {
-      JButton gerenciamentoUsuarios =
-          new JButton("Gerenciamento de usuários");
-      gerenciamentoUsuarios.addActionListener(
-          evento -> executarAcao(
-              () -> presenter.abrirCadastroUsuarios()));
-      funcionalidades.add(gerenciamentoUsuarios);
+      JButton cadastro = new JButton("Cadastrar um novo usuário");
+      cadastro.addActionListener(
+          evento -> executarAcao(() -> presenter.abrirCadastroUsuarios()));
+      adicionarBotaoMenu(menu, cadastro, linhaMenu++);
     }
-    conteudo.add(funcionalidades, BorderLayout.CENTER);
+    adicionarBotaoMenu(menu, criarBotaoConsulta(presenter), linhaMenu++);
 
-    JPanel rodape = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-    JButton sair = new JButton("Sair");
+    JButton sair = new JButton("Sair do Sistema");
     sair.addActionListener(
         evento -> mostrarOpcoesDeSaida(presenter));
-    rodape.add(sair);
-
-    JPanel areaInferior = new JPanel(new BorderLayout(8, 8));
-    areaInferior.add(new JLabel(
-        "Consulte os arquivos autorizados na pasta segura.",
-        SwingConstants.CENTER), BorderLayout.CENTER);
-    areaInferior.add(rodape, BorderLayout.SOUTH);
-    conteudo.add(areaInferior, BorderLayout.SOUTH);
+    adicionarBotaoMenu(menu, sair, linhaMenu);
+    JPanel corpos = new JPanel(new BorderLayout(8, 8));
+    corpos.add(corpo1, BorderLayout.NORTH);
+    corpos.add(menu, BorderLayout.CENTER);
+    conteudo.add(corpos, BorderLayout.CENTER);
 
     return conteudo;
+  }
+
+  public static void adicionarBotaoMenu(
+      JPanel menu,
+      JButton botao,
+      int linha) {
+    Dimension tamanho = new Dimension(420, 42);
+    botao.setPreferredSize(tamanho);
+    botao.setMinimumSize(tamanho);
+    botao.setMaximumSize(tamanho);
+
+    GridBagConstraints constraints = new GridBagConstraints();
+    constraints.gridx = 0;
+    constraints.gridy = linha;
+    constraints.anchor = GridBagConstraints.CENTER;
+    constraints.insets = new Insets(6, 0, 6, 0);
+    menu.add(botao, constraints);
+  }
+
+  private JButton criarBotaoConsulta(PrincipalPresenter presenter) {
+    JButton consulta = new JButton(
+        "Consultar pasta de arquivos secretos do usuário");
+    consulta.setEnabled(presenter.podeConsultarPastaSegura());
+    if (!presenter.podeConsultarPastaSegura()) {
+      consulta.setToolTipText(
+          "O contexto seguro do administrador não está disponível.");
+    }
+    consulta.addActionListener(
+        evento -> executarAcao(() -> presenter.consultarPastaSegura()));
+    return consulta;
+  }
+
+  private static JPanel criarCabecalho(PrincipalModel model) {
+    JPanel cabecalho = new JPanel(new GridLayout(0, 1, 4, 4));
+    cabecalho.add(new JLabel("Login: " + model.getEmailUsuario()));
+    cabecalho.add(new JLabel("Grupo: " + model.getGrupoUsuario()));
+    cabecalho.add(new JLabel("Nome: " + model.getNomeUsuario()));
+    return cabecalho;
   }
 
   private void mostrarOpcoesDeSaida(PrincipalPresenter presenter) {
@@ -98,29 +121,62 @@ public final class PrincipalWindow extends JFrame {
       return;
     }
 
-    Object[] opcoes = {
-        "Encerrar sessão",
-        "Encerrar sistema",
-        "Voltar ao menu"
-    };
-    int escolha = JOptionPane.showOptionDialog(
-        this,
-        "Escolha como deseja sair.",
-        "Sair do Cofre Digital",
-        JOptionPane.DEFAULT_OPTION,
-        JOptionPane.QUESTION_MESSAGE,
-        null,
-        opcoes,
-        opcoes[0]);
+    mostrarTelaDeSaida(presenter, model);
+  }
 
+  private void mostrarTelaDeSaida(
+      PrincipalPresenter presenter,
+      PrincipalModel model) {
+    javax.swing.JDialog dialogo = new javax.swing.JDialog(
+        this,
+        "Saída do Cofre Digital",
+        javax.swing.JDialog.ModalityType.APPLICATION_MODAL);
+    dialogo.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
+    JPanel conteudo = new JPanel(new BorderLayout(12, 12));
+    conteudo.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
+    conteudo.add(criarCabecalho(model), BorderLayout.NORTH);
+
+    JPanel corpo1 = new JPanel(new BorderLayout());
+    corpo1.add(new JLabel(
+        "Total de acessos do usuário: " + presenter.getTotalAcessos()),
+        BorderLayout.WEST);
+
+    JPanel corpo2 = new JPanel(new BorderLayout(8, 12));
+    corpo2.add(new JLabel(
+        "Pressione o botão Encerrar Sessão ou o botão Encerrar Sistema "
+            + "para confirmar."), BorderLayout.NORTH);
+    JPanel botoes = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 8));
+    JButton encerrarSessao = new JButton("Encerrar Sessão");
+    encerrarSessao.addActionListener(evento -> executarSaida(
+        presenter::encerrarSessao,
+        dialogo));
+    JButton encerrarSistema = new JButton("Encerrar Sistema");
+    encerrarSistema.addActionListener(evento -> executarSaida(
+        presenter::encerrarSistema,
+        dialogo));
+    JButton voltar = new JButton("Voltar");
+    voltar.addActionListener(evento -> executarSaida(
+        presenter::voltarDaSaida,
+        dialogo));
+    botoes.add(encerrarSessao);
+    botoes.add(encerrarSistema);
+    botoes.add(voltar);
+    corpo2.add(botoes, BorderLayout.SOUTH);
+    JPanel corpos = new JPanel(new BorderLayout(8, 8));
+    corpos.add(corpo1, BorderLayout.NORTH);
+    corpos.add(corpo2, BorderLayout.CENTER);
+    conteudo.add(corpos, BorderLayout.CENTER);
+    dialogo.setContentPane(conteudo);
+    dialogo.setMinimumSize(new Dimension(600, 380));
+    dialogo.pack();
+    dialogo.setLocationRelativeTo(this);
+    dialogo.setVisible(true);
+  }
+
+  private void executarSaida(Runnable acao, javax.swing.JDialog dialogo) {
     try {
-      if (escolha == 0) {
-        presenter.encerrarSessao();
-      } else if (escolha == 1) {
-        presenter.encerrarSistema();
-      } else {
-        presenter.voltarDaSaida();
-      }
+      acao.run();
+      dialogo.dispose();
     } catch (IllegalStateException erro) {
       exibirErroDeAuditoria(erro);
     }

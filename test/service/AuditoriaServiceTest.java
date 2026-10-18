@@ -60,6 +60,25 @@ public class AuditoriaServiceTest {
   }
 
   @Test
+  public void contarConsultasDeveConsiderarApenasListagensDoUsuario()
+      throws SQLException {
+    int outroUid = new UsuarioDAO(connection).inserir(
+        "Outro usuário",
+        "outro@example.com",
+        "hash",
+        new byte[] { 2 },
+        2);
+    AuditoriaService auditoria = AuditoriaService.getInstancia();
+    auditoria.registrar(connection, 7001, uid, null);
+    auditoria.registrar(connection, 7003, uid, null);
+    auditoria.registrar(connection, 7003, uid, null);
+    auditoria.registrar(connection, 7003, outroUid, null);
+    auditoria.registrar(connection, 7004, uid, null);
+
+    assertEquals(2, auditoria.contarEventos(connection, uid, 7003));
+  }
+
+  @Test
   public void todosOsCodigosDoEnunciadoDevemEstarDisponiveis()
       throws SQLException {
     int[] codigos = {

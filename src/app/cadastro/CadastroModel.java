@@ -7,8 +7,11 @@ import model.Usuario;
 public final class CadastroModel {
 
   private final Integer uidAdministrador;
-  private final String descricao;
-  private final String grupoNovoUsuario;
+  private final String loginAdministrador;
+  private final String nomeAdministrador;
+  private final String grupoAdministrador;
+  private int totalUsuarios;
+  private String grupoNovoUsuario;
   private String caminhoCertificado;
   private String caminhoChavePrivada;
   private char[] senha;
@@ -17,28 +20,46 @@ public final class CadastroModel {
 
   private CadastroModel(
       Integer uidAdministrador,
-      String descricao,
+      String loginAdministrador,
+      String nomeAdministrador,
+      String grupoAdministrador,
+      int totalUsuarios,
       String grupoNovoUsuario) {
     this.uidAdministrador = uidAdministrador;
-    this.descricao = descricao;
+    this.loginAdministrador = loginAdministrador;
+    this.nomeAdministrador = nomeAdministrador;
+    this.grupoAdministrador = grupoAdministrador;
+    this.totalUsuarios = totalUsuarios;
     this.grupoNovoUsuario = grupoNovoUsuario;
   }
 
   public static CadastroModel cadastroInicial(int totalUsuarios) {
     return new CadastroModel(
         null,
-        "Total de usuários do sistema: " + totalUsuarios,
+        null,
+        null,
+        null,
+        totalUsuarios,
         "Administrador");
   }
 
-  public static CadastroModel cadastroDeUsuario(Usuario administrador) {
+  public static CadastroModel cadastroDeUsuario(
+      Usuario administrador,
+      int totalUsuarios) {
     if (administrador == null || administrador.getGid() != 1) {
       throw new IllegalArgumentException(
           "O cadastro de usuários exige uma sessão de administrador.");
     }
+    if (totalUsuarios < 0) {
+      throw new IllegalArgumentException(
+          "O total de usuários não pode ser negativo.");
+    }
     return new CadastroModel(
         administrador.getUid(),
-        "Administrador: " + administrador.getNome(),
+        administrador.getEmail(),
+        administrador.getNome(),
+        administrador.getGrupo(),
+        totalUsuarios,
         "Usuário");
   }
 
@@ -55,11 +76,48 @@ public final class CadastroModel {
   }
 
   public String getDescricao() {
-    return descricao;
+    return "Total de usuários do sistema: " + totalUsuarios;
+  }
+
+  public int getTotalUsuarios() {
+    return totalUsuarios;
+  }
+
+  public void registrarUsuarioCadastrado() {
+    totalUsuarios++;
+  }
+
+  public String getLoginAdministrador() {
+    return loginAdministrador;
+  }
+
+  public String getNomeAdministrador() {
+    return nomeAdministrador;
+  }
+
+  public String getGrupoAdministrador() {
+    return grupoAdministrador;
   }
 
   public String getGrupoNovoUsuario() {
     return grupoNovoUsuario;
+  }
+
+  public int getGidNovoUsuario() {
+    return "Administrador".equals(grupoNovoUsuario) ? 1 : 2;
+  }
+
+  public void setGrupoNovoUsuario(String grupo) {
+    if (isCadastroInicial()) {
+      if (!"Administrador".equals(grupo)) {
+        throw new IllegalArgumentException(
+            "O cadastro inicial deve criar um administrador.");
+      }
+    } else if (!"Administrador".equals(grupo)
+        && !"Usuário".equals(grupo)) {
+      throw new IllegalArgumentException("O grupo selecionado é inválido.");
+    }
+    grupoNovoUsuario = grupo;
   }
 
   public void preencherFormulario(

@@ -73,10 +73,19 @@ public final class PrincipalPresenter {
           "A janela principal ainda não foi aberta.");
     }
     registrarEvento(5002);
+    int totalUsuarios;
+    try {
+      totalUsuarios = new UsuarioDAO(connection).contarUsuarios();
+    } catch (SQLException erro) {
+      throw new IllegalStateException(
+          "Não foi possível consultar o total de usuários.",
+          erro);
+    }
     CadastroPresenter cadastro = new CadastroPresenter(
         connection,
         CadastroModel.cadastroDeUsuario(
-            model.getUsuarioAutenticado()));
+            model.getUsuarioAutenticado(),
+            totalUsuarios));
     cadastro.abrir(janela, null);
   }
 

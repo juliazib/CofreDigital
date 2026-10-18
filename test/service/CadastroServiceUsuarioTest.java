@@ -59,6 +59,7 @@ public class CadastroServiceUsuarioTest {
   @Test
   public void deveCadastrarUsuarioComumComCertificadoEChave()
       throws Exception {
+    assertEquals(2, usuarioDAO.contarUsuarios());
     String certificado = new String(
         Files.readAllBytes(Paths.get(
             "test/resources/certificados/user01-x509.crt")),
@@ -77,6 +78,7 @@ public class CadastroServiceUsuarioTest {
     Usuario cadastrado = usuarioDAO.buscarPorEmail(
         "user01@inf1416.puc-rio.br");
     assertNotNull(cadastrado);
+    assertEquals(3, usuarioDAO.contarUsuarios());
     assertEquals(2, cadastrado.getGid());
     assertEquals("Usuário", cadastrado.getGrupo());
     assertNotNull(cadastrado.getKid());
@@ -86,6 +88,32 @@ public class CadastroServiceUsuarioTest {
         crypto.Base32.Alphabet.BASE32,
         true,
         false).fromString(segredo).length);
+  }
+
+  @Test
+  public void deveCadastrarAdministradorAdicionalQuandoSelecionado()
+      throws Exception {
+    String certificado = new String(
+        Files.readAllBytes(Paths.get(
+            "test/resources/certificados/user01-x509.crt")),
+        StandardCharsets.UTF_8);
+    byte[] chave = Files.readAllBytes(Paths.get(
+        "test/resources/certificados/user01-pkcs8-aes.key"));
+
+    service.cadastrarUsuario(
+        uidAdministrador,
+        1,
+        "12345678".toCharArray(),
+        "12345678".toCharArray(),
+        certificado,
+        chave,
+        "user01".toCharArray());
+
+    Usuario cadastrado = usuarioDAO.buscarPorEmail(
+        "user01@inf1416.puc-rio.br");
+    assertNotNull(cadastrado);
+    assertEquals(1, cadastrado.getGid());
+    assertEquals("Administrador", cadastrado.getGrupo());
   }
 
   @Test

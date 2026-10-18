@@ -157,24 +157,33 @@ public class UsuarioDAOTest {
   @Test
   public void deveContarAcessosRegistrados() throws SQLException {
     int uid = inserirUsuarioDeTeste("teste@example.com");
+    int outroUid = inserirUsuarioDeTeste("outro@example.com");
 
     try (PreparedStatement statement = connection.prepareStatement(
-        "INSERT INTO Mensagens (codigo, mensagem) VALUES (?, ?)")) {
+        "INSERT INTO Mensagens (codigo, mensagem) VALUES (?, ?), (?, ?)")) {
       statement.setInt(1, 1003);
       statement.setString(2, "Sessão iniciada.");
+      statement.setInt(3, 5001);
+      statement.setString(4, "Tela principal apresentada.");
       statement.executeUpdate();
     }
 
     try (PreparedStatement statement = connection.prepareStatement(
-        "INSERT INTO Registros (data_hora, UID, MID) " +
-            "SELECT ?, ?, MID FROM Mensagens WHERE codigo = ?")) {
+        "INSERT INTO Registros (data_hora, UID, MID) VALUES " +
+            "(?, ?, (SELECT MID FROM Mensagens WHERE codigo = 1003)), " +
+            "(?, ?, (SELECT MID FROM Mensagens WHERE codigo = 1003)), " +
+            "(?, ?, (SELECT MID FROM Mensagens WHERE codigo = 5001))")) {
       statement.setString(1, "2026-10-16T20:00:00");
       statement.setInt(2, uid);
-      statement.setInt(3, 1003);
+      statement.setString(3, "2026-10-16T21:00:00");
+      statement.setInt(4, uid);
+      statement.setString(5, "2026-10-16T22:00:00");
+      statement.setInt(6, outroUid);
       statement.executeUpdate();
     }
 
-    assertEquals(1, dao.contarAcessos(uid));
+    assertEquals(2, dao.contarAcessos(uid));
+    assertEquals(0, dao.contarAcessos(outroUid));
   }
  
   @Test

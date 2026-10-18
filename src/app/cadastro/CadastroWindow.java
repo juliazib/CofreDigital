@@ -2,15 +2,19 @@ package app.cadastro;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.GraphicsConfiguration;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.security.cert.X509Certificate;
 
 import javax.swing.JDialog;
+import javax.swing.JComboBox;
 import javax.swing.JOptionPane;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -31,9 +35,12 @@ public final class CadastroWindow extends JDialog
   private final CampoSenha fraseSecreta = new CampoSenha(24, 255);
   private final CampoSenha senhaPessoal = new CampoSenha(10, 10);
   private final CampoSenha confirmacaoSenha = new CampoSenha(10, 10);
+  private final JComboBox<String> grupoNovoUsuario =
+      new JComboBox<>(new String[] { "Administrador", "Usuário" });
   private final JButton botaoCadastrar = new JButton("Cadastrar");
   private final CadastroPresenter presenter;
   private final CadastroModel model;
+  private final JLabel totalUsuarios = new JLabel();
 
   CadastroWindow(
       Window owner,
@@ -48,10 +55,12 @@ public final class CadastroWindow extends JDialog
     this.model = model;
     this.presenter = presenter;
     setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-    setMinimumSize(new Dimension(680, 560));
-    setSize(800, 660);
-    setLocationRelativeTo(owner);
     setContentPane(criarConteudo());
+    pack();
+    setSize(calcularTamanhoInicial(
+        getSize(),
+        obterAreaUtil(owner)));
+    setLocationRelativeTo(owner);
     addWindowListener(new WindowAdapter() {
       @Override
       public void windowClosing(WindowEvent evento) {
@@ -63,18 +72,21 @@ public final class CadastroWindow extends JDialog
   private JPanel criarConteudo() {
     JPanel conteudo = new JPanel(new BorderLayout(12, 12));
     conteudo.setBorder(BorderFactory.createEmptyBorder(16, 18, 16, 18));
-    if (model.isCadastroInicial()) {
-      conteudo.add(criarCabecalho(), BorderLayout.NORTH);
-    }
+    conteudo.add(criarCabecalho(), BorderLayout.NORTH);
 
-    JPanel corpo = new JPanel(new BorderLayout(8, 16));
-    corpo.add(new JLabel(model.getDescricao()), BorderLayout.NORTH);
+    JPanel corpos = new JPanel(new BorderLayout(8, 10));
+    JPanel corpo1 = new JPanel(new BorderLayout());
+    totalUsuarios.setText(model.getDescricao());
+    corpo1.add(totalUsuarios, BorderLayout.CENTER);
+    corpos.add(corpo1, BorderLayout.NORTH);
+    JPanel corpo2 = new JPanel(new BorderLayout(8, 8));
     javax.swing.JScrollPane formulario =
         new javax.swing.JScrollPane(criarFormulario());
     formulario.setBorder(null);
+    formulario.setHorizontalScrollBarPolicy(
+        javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
     formulario.getVerticalScrollBar().setUnitIncrement(16);
-    corpo.add(formulario, BorderLayout.CENTER);
-    conteudo.add(corpo, BorderLayout.CENTER);
+    corpo2.add(formulario, BorderLayout.CENTER);
 
     JPanel botoes = new JPanel();
     botaoCadastrar.addActionListener(evento -> presenter.cadastrar());
@@ -83,24 +95,31 @@ public final class CadastroWindow extends JDialog
         model.isCadastroInicial() ? "Cancelar" : "Voltar ao menu");
     botaoFechar.addActionListener(evento -> presenter.voltar());
     botoes.add(botaoFechar);
-    conteudo.add(botoes, BorderLayout.SOUTH);
+    corpo2.add(botoes, BorderLayout.SOUTH);
+    corpos.add(corpo2, BorderLayout.CENTER);
+    conteudo.add(corpos, BorderLayout.CENTER);
 
     return conteudo;
   }
 
   private JPanel criarCabecalho() {
     JPanel cabecalho = new JPanel(new GridBagLayout());
-    cabecalho.setBorder(BorderFactory.createTitledBorder("Cabeçalho"));
     GridBagConstraints constraints = new GridBagConstraints();
     constraints.gridx = 0;
     constraints.anchor = GridBagConstraints.WEST;
     constraints.insets = new Insets(2, 6, 2, 16);
     constraints.gridy = 0;
-    cabecalho.add(new JLabel("Login: (sessão não autenticada)"), constraints);
+    String login = model.getLoginAdministrador();
+    String grupo = model.getGrupoAdministrador();
+    String nome = model.getNomeAdministrador();
+    cabecalho.add(new JLabel("Login: " + (login == null ? "—" : login)),
+        constraints);
     constraints.gridy++;
-    cabecalho.add(new JLabel("Grupo: —"), constraints);
+    cabecalho.add(new JLabel("Grupo: " + (grupo == null ? "—" : grupo)),
+        constraints);
     constraints.gridy++;
-    cabecalho.add(new JLabel("Nome: —"), constraints);
+    cabecalho.add(new JLabel("Nome: " + (nome == null ? "—" : nome)),
+        constraints);
     return cabecalho;
   }
 
@@ -128,7 +147,7 @@ public final class CadastroWindow extends JDialog
         formulario,
         3,
         "Grupo:",
-        new JLabel(model.getGrupoNovoUsuario()));
+        criarCampoGrupo());
     adicionarLinha(formulario, 4, "Senha pessoal (8 a 10 dígitos):", senhaPessoal);
     adicionarLinha(
         formulario,
@@ -137,6 +156,21 @@ public final class CadastroWindow extends JDialog
         confirmacaoSenha);
 
     return formulario;
+  }
+
+  private java.awt.Component criarCampoGrupo() {
+    if (model.isCadastroInicial()) {
+      return new JLabel(model.getGrupoNovoUsuario());
+    }
+    grupoNovoUsuario.setName("grupoNovoUsuario");
+    grupoNovoUsuario.setSelectedItem(model.getGrupoNovoUsuario());
+    grupoNovoUsuario.addActionListener(evento -> {
+      String grupo = (String) grupoNovoUsuario.getSelectedItem();
+      if (grupo != null) {
+        model.setGrupoNovoUsuario(grupo);
+      }
+    });
+    return grupoNovoUsuario;
   }
 
   @Override
@@ -213,6 +247,11 @@ public final class CadastroWindow extends JDialog
   }
 
   @Override
+  public void atualizarTotalUsuarios(int total) {
+    totalUsuarios.setText("Total de usuários do sistema: " + total);
+  }
+
+  @Override
   public void habilitarCadastro(boolean habilitado) {
     botaoCadastrar.setEnabled(habilitado);
   }
@@ -239,6 +278,31 @@ public final class CadastroWindow extends JDialog
     constraints.fill = GridBagConstraints.HORIZONTAL;
     constraints.insets = new Insets(7, 0, 7, 8);
     painel.add(campo, constraints);
+  }
+
+  public static Dimension calcularTamanhoInicial(
+      Dimension tamanhoPreferido,
+      Dimension areaUtil) {
+    if (tamanhoPreferido == null || areaUtil == null
+        || tamanhoPreferido.width <= 0 || tamanhoPreferido.height <= 0
+        || areaUtil.width <= 0 || areaUtil.height <= 0) {
+      throw new IllegalArgumentException(
+          "O tamanho preferido e a área útil devem ser positivos.");
+    }
+    return new Dimension(
+        Math.min(tamanhoPreferido.width, areaUtil.width),
+        Math.min(tamanhoPreferido.height, areaUtil.height));
+  }
+
+  private Dimension obterAreaUtil(Window owner) {
+    GraphicsConfiguration configuracao = owner == null
+        ? getGraphicsConfiguration()
+        : owner.getGraphicsConfiguration();
+    Rectangle limites = configuracao.getBounds();
+    Insets recuos = Toolkit.getDefaultToolkit().getScreenInsets(configuracao);
+    return new Dimension(
+        limites.width - recuos.left - recuos.right,
+        limites.height - recuos.top - recuos.bottom);
   }
 
 }
