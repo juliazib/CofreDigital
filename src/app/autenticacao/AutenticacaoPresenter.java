@@ -85,6 +85,11 @@ public final class AutenticacaoPresenter {
 
       String senha = validarSenha(email);
       if (senha == null) {
+        Usuario usuarioAposSenha = usuarioDAO.buscarPorEmail(email);
+        if (usuarioAposSenha != null
+            && usuarioAposSenha.estaBloqueado(System.currentTimeMillis())) {
+          continue;
+        }
         return null;
       }
 

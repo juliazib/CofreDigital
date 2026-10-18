@@ -29,6 +29,7 @@ import model.Usuario;
 public class AutenticacaoPresenterTest {
 
   private static final String EMAIL = "admin@example.com";
+  private static final String EMAIL_SECUNDARIO = "usuario@example.com";
   private static final String SENHA = "12345678";
   private static final String SEGREDO_TOTP =
       "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
@@ -228,13 +229,15 @@ public class AutenticacaoPresenterTest {
   public void deveAvisarBloqueioAposTresSenhasIncorretas()
       throws Exception {
     FakeView view = new FakeView(
-        new String[] { EMAIL },
+        new String[] { EMAIL, EMAIL_SECUNDARIO },
         new char[][] {
             "senha-errada".toCharArray(),
             "senha-errada".toCharArray(),
-            "senha-errada".toCharArray()
+            "senha-errada".toCharArray(),
+            SENHA.toCharArray()
         },
-        new String[0]);
+        new String[] { gerarCodigoValido() });
+    adicionarUsuarioSecundario();
 
     Usuario autenticado =
         new AutenticacaoPresenter(
@@ -242,7 +245,8 @@ public class AutenticacaoPresenterTest {
             new AutenticacaoModel(),
             view).autenticar();
 
-    assertNull(autenticado);
+    assertEquals(EMAIL_SECUNDARIO, autenticado.getEmail());
+    assertEquals(2, view.loginsSolicitados);
     assertEquals(3, view.avisos.size());
     assertEquals(
         "Acesso bloqueado por dois minutos após três tentativas incorretas.",
@@ -255,6 +259,15 @@ public class AutenticacaoPresenterTest {
     assertEventos(uid, 3005, 1);
     assertEventos(uid, 3006, 1);
     assertEventos(uid, 3007, 1);
+  }
+
+  private void adicionarUsuarioSecundario() throws Exception {
+    usuarioDAO.inserir(
+        "Usuário",
+        EMAIL_SECUNDARIO,
+        gerarHashRapidoParaTeste(SENHA),
+        TokenUtils.cifrar(SEGREDO_TOTP, SENHA),
+        2);
   }
 
   private String gerarCodigoValido() throws Exception {
@@ -309,6 +322,7 @@ public class AutenticacaoPresenterTest {
     private final List<String> emailsSolicitadosParaSenha =
         new ArrayList<>();
     private int loginAtual;
+    private int loginsSolicitados;
     private int senhaAtual;
     private int codigoAtual;
 
@@ -320,6 +334,7 @@ public class AutenticacaoPresenterTest {
 
     @Override
     public boolean solicitarLogin(AutenticacaoModel model) {
+      loginsSolicitados++;
       if (loginAtual >= logins.length || logins[loginAtual] == null) {
         loginAtual++;
         return false;
