@@ -65,6 +65,7 @@ public class RegistroDAOTest {
     assertEquals(1, registro.getRid());
     assertEquals(Instant.parse("2026-10-18T19:39:06Z"), registro.getDataHora());
     assertEquals(Integer.valueOf(1), registro.getUid());
+    assertEquals("usuario@example.com", registro.getLoginName());
     assertEquals(7001, registro.getCodigoMensagem());
     assertEquals("Arquivo descriptografado.", registro.getMensagem());
     assertEquals("XXYYZZ11", registro.getArquivo());

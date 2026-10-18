@@ -73,6 +73,9 @@ abaixo passando o caminho do arquivo da chave privada do administrador:
 O script compila o projeto e inicia o LogView a partir da raiz, onde está
 `cofre.db`. O programa solicita a frase secreta pelo terminal sem exibi-la,
 valida a chave privada contra o certificado do administrador cadastrado e só
-então abre a tela gráfica com os registros em ordem cronológica. O caminho da
-chave é fornecido como argumento; a frase secreta nunca é argumento nem aparece
-na tela. Execute o script em um terminal interativo.
+então abre a tela gráfica com os registros em ordem cronológica, exibindo data
+e hora, UID do usuário, código e mensagem, além do arquivo selecionado quando
+aplicável. Marcadores como `<login_name>` e `<arq_name>` são substituídos pelo
+e-mail usado no login e pelo nome do arquivo registrado. O caminho da chave é
+fornecido como argumento; a frase secreta nunca é argumento nem aparece na
+tela. Execute o script em um terminal interativo.

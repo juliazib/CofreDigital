@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.BorderFactory;
 import javax.swing.JFrame;
@@ -42,6 +44,8 @@ public final class LogView extends JFrame {
   private static final DateTimeFormatter FORMATO_DATA_HORA =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS 'UTC'")
           .withZone(ZoneOffset.UTC);
+  private static final Pattern MARCADOR_MENSAGEM =
+      Pattern.compile("<(login_name|arq_name)>");
 
   public LogView(List<RegistroAuditoria> registros) {
     super("LogView - Auditoria do Cofre Digital");
@@ -191,17 +195,19 @@ public final class LogView extends JFrame {
     }
   }
 
-  private static final class RegistroTableModel extends AbstractTableModel {
+  public static final class RegistroTableModel extends AbstractTableModel {
 
     private static final String[] COLUNAS = {
         "Data/hora (UTC)",
+        "UID",
         "Código",
-        "Mensagem"
+        "Mensagem",
+        "Arquivo selecionado"
     };
 
     private final List<RegistroAuditoria> registros;
 
-    private RegistroTableModel(List<RegistroAuditoria> registros) {
+    public RegistroTableModel(List<RegistroAuditoria> registros) {
       this.registros = Collections.unmodifiableList(
           new ArrayList<>(registros));
     }
@@ -228,18 +234,39 @@ public final class LogView extends JFrame {
         case 0:
           return FORMATO_DATA_HORA.format(registro.getDataHora());
         case 1:
-          return registro.getCodigoMensagem();
+          return registro.getUid() == null
+              ? "—"
+              : registro.getUid().toString();
         case 2:
-          return registro.getMensagem();
+          return registro.getCodigoMensagem();
+        case 3:
+          return formatarMensagem(registro);
+        case 4:
+          return registro.getArquivo() == null ? "—" : registro.getArquivo();
         default:
           throw new IndexOutOfBoundsException(
               "Coluna inexistente: " + coluna);
       }
     }
 
+    private String formatarMensagem(RegistroAuditoria registro) {
+      Matcher matcher = MARCADOR_MENSAGEM.matcher(registro.getMensagem());
+      StringBuffer mensagem = new StringBuffer();
+      while (matcher.find()) {
+        String valor = "login_name".equals(matcher.group(1))
+            ? registro.getLoginName()
+            : registro.getArquivo();
+        matcher.appendReplacement(
+            mensagem,
+            Matcher.quoteReplacement(valor == null ? "—" : valor));
+      }
+      matcher.appendTail(mensagem);
+      return mensagem.toString();
+    }
+
     @Override
     public Class<?> getColumnClass(int coluna) {
-      return coluna == 1 ? Integer.class : String.class;
+      return coluna == 2 ? Integer.class : String.class;
     }
 
     @Override

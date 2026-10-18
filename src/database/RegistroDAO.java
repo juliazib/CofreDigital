@@ -63,9 +63,10 @@ public final class RegistroDAO {
 
   public List<RegistroAuditoria> listar() throws SQLException {
     String sql = "SELECT r.RID, r.data_hora, r.UID, m.codigo, " +
-        "m.mensagem, r.arquivo " +
+        "m.mensagem, u.email AS login_name, r.arquivo " +
         "FROM Registros r " +
         "JOIN Mensagens m ON m.MID = r.MID " +
+        "LEFT JOIN Usuarios u ON u.UID = r.UID " +
         "ORDER BY r.data_hora ASC, r.RID ASC";
     List<RegistroAuditoria> registros = new ArrayList<>();
 
@@ -80,6 +81,7 @@ public final class RegistroDAO {
             uid,
             result.getInt("codigo"),
             result.getString("mensagem"),
+            result.getString("login_name"),
             result.getString("arquivo")));
       }
     }

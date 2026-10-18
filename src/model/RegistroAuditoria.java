@@ -9,6 +9,7 @@ public final class RegistroAuditoria {
   private final Integer uid;
   private final int codigoMensagem;
   private final String mensagem;
+  private final String loginName;
   private final String arquivo;
 
   public RegistroAuditoria(
@@ -17,12 +18,14 @@ public final class RegistroAuditoria {
       Integer uid,
       int codigoMensagem,
       String mensagem,
+      String loginName,
       String arquivo) {
     this.rid = rid;
     this.dataHora = dataHora;
     this.uid = uid;
     this.codigoMensagem = codigoMensagem;
     this.mensagem = mensagem;
+    this.loginName = loginName;
     this.arquivo = arquivo;
   }
 
@@ -44,6 +47,10 @@ public final class RegistroAuditoria {
 
   public String getMensagem() {
     return mensagem;
+  }
+
+  public String getLoginName() {
+    return loginName;
   }
 
   public String getArquivo() {
