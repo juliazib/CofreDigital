@@ -114,10 +114,44 @@ public final class PastaSeguraPresenter {
       view.exibirArquivoDescriptografado(arquivo);
     } catch (IOException | GeneralSecurityException
         | SecurityException | IllegalArgumentException | SQLException erro) {
-      view.exibirErro(erro.getMessage());
+      view.exibirErro(mensagemErroDescriptografia(erro));
     } finally {
       Arrays.fill(fraseSecreta, '\0');
     }
+  }
+
+  public static String mensagemErroDescriptografia(Exception erro) {
+    if (erro instanceof PastaSeguraService.FalhaDescriptografia) {
+      return "Falha de sigilo: não foi possível descriptografar o arquivo. "
+          + "Verifique se o arquivo criptografado e o envelope estão "
+          + "disponíveis, íntegros e correspondem a este usuário.";
+    }
+    if (erro instanceof PastaSeguraService.FalhaIntegridade) {
+      return "Falha de integridade/autenticidade: não foi possível validar "
+          + "a assinatura digital ou a identidade do proprietário. O arquivo "
+          + "não foi salvo.";
+    }
+    if (erro instanceof PastaSeguraService.DestinoJaExiste) {
+      return "O arquivo não foi salvo porque já existe um arquivo com esse "
+          + "nome. Nenhum arquivo foi sobrescrito.";
+    }
+    if (erro instanceof SecurityException) {
+      return "Você não tem permissão para acessar este arquivo.";
+    }
+    if (erro instanceof GeneralSecurityException) {
+      return "Não foi possível validar os dados criptográficos da pasta "
+          + "segura. Verifique a frase secreta, os certificados e os índices.";
+    }
+    if (erro instanceof SQLException) {
+      return "Não foi possível concluir a operação devido a uma falha no "
+          + "banco de dados ou no registro de auditoria.";
+    }
+    if (erro instanceof IOException) {
+      return "Ocorreu uma falha ao acessar ou salvar os arquivos da pasta "
+          + "segura. Verifique a pasta e tente novamente.";
+    }
+    return "Não foi possível descriptografar o arquivo. Verifique os dados "
+        + "informados e tente novamente.";
   }
 
   public void encerrar() {

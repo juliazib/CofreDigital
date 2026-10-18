@@ -312,7 +312,7 @@ public class PastaSeguraServiceTest {
     Files.write(assinatura, bytes);
 
     assertThrows(
-        GeneralSecurityException.class,
+        PastaSeguraService.FalhaIntegridade.class,
         () -> service.descriptografarArquivo(
             pastaTemporaria,
             usuario01,
@@ -350,7 +350,7 @@ public class PastaSeguraServiceTest {
         new byte[] { 1 });
 
     assertThrows(
-        GeneralSecurityException.class,
+        PastaSeguraService.FalhaDescriptografia.class,
         () -> service.descriptografarArquivo(
             pastaTemporaria,
             usuario01,
@@ -359,6 +359,23 @@ public class PastaSeguraServiceTest {
 
     assertEquals(1, contarEvento(usuario01, 7020));
     assertEquals(0, contarEvento(usuario01, 7018));
+  }
+
+  @Test
+  public void deveClassificarEnvelopeAusenteComoFalhaDeSigilo()
+      throws Exception {
+    Files.delete(pastaTemporaria.resolve("XXYYZZ11.env"));
+
+    assertThrows(
+        PastaSeguraService.FalhaDescriptografia.class,
+        () -> service.descriptografarArquivo(
+            pastaTemporaria,
+            usuario01,
+            "user01".toCharArray(),
+            "XXYYZZ11"));
+
+    assertEquals(1, contarEvento(usuario01, 7020));
+    assertEquals(0, contarEvento(usuario01, 7017));
   }
 
   @Test

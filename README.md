@@ -29,6 +29,9 @@ arquivo e use **Descriptografar selecionado** para restaurá-lo na pasta
 escolhida. Arquivos existentes não são sobrescritos. Um arquivo listado apenas
 por pertencer ao grupo não pode ser descriptografado sem um envelope pessoal
 (`.env`) ou um envelope de compartilhamento (`.shr`) destinado ao usuário.
+Falhas de descriptografia, validação da assinatura/autenticidade, permissão e
+gravação são apresentadas com mensagens distintas, sem expor detalhes técnicos
+do sistema de arquivos ou da criptografia.
 
 ## Auditoria
 

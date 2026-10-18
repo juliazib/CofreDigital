@@ -1,6 +1,7 @@
 package service;
 
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -20,6 +21,26 @@ import model.Usuario;
 import parser.IndicePastaSeguraParser;
 
 public final class PastaSeguraService {
+
+  public static final class FalhaDescriptografia
+      extends GeneralSecurityException {
+    public FalhaDescriptografia(String mensagem, Throwable causa) {
+      super(mensagem, causa);
+    }
+  }
+
+  public static final class FalhaIntegridade
+      extends GeneralSecurityException {
+    public FalhaIntegridade(String mensagem, Throwable causa) {
+      super(mensagem, causa);
+    }
+  }
+
+  public static final class DestinoJaExiste extends IOException {
+    public DestinoJaExiste(String mensagem, Throwable causa) {
+      super(mensagem, causa);
+    }
+  }
 
   private final AuditoriaService auditoria;
   private final PastaSeguraCrypto criptografia;
@@ -100,8 +121,9 @@ public final class PastaSeguraService {
       try {
         envelope = Files.readAllBytes(pasta.resolve(nomeEnvelope));
       } catch (IOException erro) {
-        auditoria.registrar(connection, 7017, usuario, arquivo.getNome());
-        throw erro;
+        auditoria.registrar(connection, 7020, usuario, arquivo.getNome());
+        throw new FalhaDescriptografia(
+            "Não foi possível ler o envelope criptográfico.", erro);
       }
 
       auditoria.registrar(connection, 7016, usuario, arquivo.getNome());
@@ -114,20 +136,28 @@ public final class PastaSeguraService {
             chaveUsuario);
       } catch (IOException | GeneralSecurityException erro) {
         auditoria.registrar(connection, 7020, usuario, arquivo.getNome());
-        throw erro;
+        throw new FalhaDescriptografia(
+            "Não foi possível descriptografar o arquivo.", erro);
       }
       auditoria.registrar(connection, 7018, usuario, arquivo.getNome());
 
+      byte[] assinatura;
       try {
-        byte[] assinatura =
-            Files.readAllBytes(pasta.resolve(codigo + ".asd"));
+        assinatura = Files.readAllBytes(pasta.resolve(codigo + ".asd"));
+      } catch (IOException erro) {
+        auditoria.registrar(connection, 7021, usuario, arquivo.getNome());
+        throw new FalhaIntegridade(
+            "A assinatura digital do arquivo não pôde ser lida.", erro);
+      }
+      try {
         criptografia.verificarAssinaturaArquivo(
             conteudo,
             assinatura,
             arquivo.getDono());
-      } catch (IOException | GeneralSecurityException | SQLException erro) {
+      } catch (GeneralSecurityException erro) {
         auditoria.registrar(connection, 7021, usuario, arquivo.getNome());
-        throw erro;
+        throw new FalhaIntegridade(
+            "A assinatura digital do arquivo é inválida.", erro);
       }
       auditoria.registrar(connection, 7019, usuario, arquivo.getNome());
       return gravarArquivoDescriptografado(pasta, arquivo, conteudo);
@@ -224,11 +254,16 @@ public final class PastaSeguraService {
       throw new GeneralSecurityException(
           "O nome secreto do arquivo não é válido.");
     }
-    return Files.write(
-        destino,
-        conteudo,
-        StandardOpenOption.CREATE_NEW,
-        StandardOpenOption.WRITE);
+    try {
+      return Files.write(
+          destino,
+          conteudo,
+          StandardOpenOption.CREATE_NEW,
+          StandardOpenOption.WRITE);
+    } catch (FileAlreadyExistsException erro) {
+      throw new DestinoJaExiste(
+          "Já existe um arquivo com o nome secreto selecionado.", erro);
+    }
   }
 
   private static void validarEntrada(
