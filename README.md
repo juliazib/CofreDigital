@@ -63,16 +63,16 @@ a chave é validada e mantida em memória e a autenticação começa imediatamen
 Ao encerrar uma sessão, a frase secreta e o contexto do administrador são
 mantidos durante a execução; uma nova autenticação começa sem solicitá-los de
 novo. Eles são descartados quando o sistema é encerrado.
-O `logView` é um programa de apoio separado do Cofre Digital. Após compilar o
-projeto, execute-o no diretório que contém `cofre.db`, passando o caminho do
-arquivo da chave privada do administrador:
+O `LogView` é um programa de apoio separado do Cofre Digital. Execute o script
+abaixo passando o caminho do arquivo da chave privada do administrador:
 
 ```bash
-java -cp "bin:lib/*" support.LogView /caminho/para/chave-privada
+./scripts/logview.sh /caminho/para/chave-privada
 ```
 
-O programa solicita a frase secreta pelo terminal sem exibi-la, valida a chave
-privada contra o certificado do administrador cadastrado e só então abre a
-tela gráfica com os registros em ordem cronológica. O caminho da chave é
-fornecido como argumento; a frase secreta nunca é argumento nem aparece na
-tela.
+O script compila o projeto e inicia o LogView a partir da raiz, onde está
+`cofre.db`. O programa solicita a frase secreta pelo terminal sem exibi-la,
+valida a chave privada contra o certificado do administrador cadastrado e só
+então abre a tela gráfica com os registros em ordem cronológica. O caminho da
+chave é fornecido como argumento; a frase secreta nunca é argumento nem aparece
+na tela. Execute o script em um terminal interativo.
