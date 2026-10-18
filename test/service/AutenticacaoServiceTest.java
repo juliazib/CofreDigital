@@ -20,6 +20,7 @@ import crypto.PasswordUtils;
 import crypto.TOTP;
 import crypto.TokenUtils;
 import database.DatabaseSchema;
+import database.RegistroDAO;
 import database.UsuarioDAO;
 import model.Usuario;
 import service.AutenticacaoService;
@@ -74,7 +75,7 @@ public class AutenticacaoServiceTest {
     DatabaseSchema.createTables(connection);
 
     UsuarioDAO usuarioDAO = new UsuarioDAO(connection);
-    autenticacao = new AutenticacaoService(usuarioDAO);
+    autenticacao = new AutenticacaoService(usuarioDAO, connection);
   }
 
   @After
@@ -109,9 +110,12 @@ public class AutenticacaoServiceTest {
     usuarioDAO.registrarFalhaDeSenha(uid, agora);
     usuarioDAO.registrarFalhaDeSenha(uid, agora);
 
-    autenticacao = new AutenticacaoService(usuarioDAO);
+    autenticacao = new AutenticacaoService(usuarioDAO, connection);
 
     assertFalse(autenticacao.iniciarLogin("teste@example.com"));
+    assertEquals(
+        1,
+        new RegistroDAO(connection).contarEventos(uid, 2004));
     }
 
     @Test
@@ -127,7 +131,7 @@ public class AutenticacaoServiceTest {
             2
         );
 
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
 
         assertTrue(
             autenticacao.validarSenha("teste@example.com", "12345678")
@@ -144,7 +148,7 @@ public class AutenticacaoServiceTest {
             new byte[] { 1, 2, 3 },
             2
         );
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
 
         char[][] paresSelecionados = {
             { '1', '9' },
@@ -178,7 +182,7 @@ public class AutenticacaoServiceTest {
             new byte[] { 1, 2, 3 },
             2
         );
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
         char[][] paresSelecionados = {
             { '9', '1' },
             { '8', '2' },
@@ -210,7 +214,7 @@ public class AutenticacaoServiceTest {
             new byte[] { 1, 2, 3 },
             2
         );
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
 
         char[][] paresSelecionados = new char[pin.length()][2];
         for (int i = 0; i < pin.length(); i++) {
@@ -240,7 +244,7 @@ public class AutenticacaoServiceTest {
             new byte[] { 1, 2, 3 },
             2
         );
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
         char[][] paresSelecionados = {
             { '0', '9' },
             { '3', '2' },
@@ -274,7 +278,7 @@ public class AutenticacaoServiceTest {
             2
         );
 
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
 
         assertFalse(
             autenticacao.validarSenha("teste@example.com", "senhaerrada")
@@ -282,6 +286,11 @@ public class AutenticacaoServiceTest {
 
         Usuario usuario = usuarioDAO.buscarPorEmail("teste@example.com");
         org.junit.Assert.assertEquals(1, usuario.getFalhasSenha());
+        assertEquals(
+            1,
+            new RegistroDAO(connection).contarEventos(
+                usuario.getUid(),
+                3004));
     }
 
     @Test
@@ -297,7 +306,7 @@ public class AutenticacaoServiceTest {
             2
         );
 
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
 
         assertFalse(autenticacao.validarSenha("teste@example.com", "errada1"));
         assertFalse(autenticacao.validarSenha("teste@example.com", "errada2"));
@@ -326,7 +335,7 @@ public class AutenticacaoServiceTest {
             2
         );
 
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
 
         // Este teste será concluído quando implementarmos validarToken.
         long agora = System.currentTimeMillis() / 1000L;
@@ -359,7 +368,7 @@ public class AutenticacaoServiceTest {
             2
         );
 
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
 
     String codigoInvalido = codigoTOTPInvalido(segredoBase32);
 
@@ -389,7 +398,7 @@ public class AutenticacaoServiceTest {
             2
         );
 
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
 
         assertFalse(
             autenticacao.validarToken(
@@ -438,7 +447,7 @@ public class AutenticacaoServiceTest {
         usuarioDAO.registrarFalhaDeSenha(uid, agora - 180_000L);
         usuarioDAO.registrarFalhaDeSenha(uid, agora - 180_000L);
 
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
 
         assertTrue(
             "O login deve ser permitido após a expiração do bloqueio.",
@@ -470,7 +479,7 @@ public class AutenticacaoServiceTest {
             2
         );
 
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
 
         assertFalse(
             autenticacao.validarSenha("teste@example.com", "senhaerrada")
@@ -502,7 +511,7 @@ public class AutenticacaoServiceTest {
             2
         );
 
-        autenticacao = new AutenticacaoService(usuarioDAO);
+        autenticacao = new AutenticacaoService(usuarioDAO, connection);
 
         // Registra uma falha de TOTP.
         String codigoInvalido = codigoTOTPInvalido(segredoBase32);

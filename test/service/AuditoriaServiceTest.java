@@ -5,9 +5,6 @@ import static org.junit.Assert.assertEquals;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 
 import org.junit.After;
 import org.junit.Before;
@@ -49,20 +46,40 @@ public class AuditoriaServiceTest {
   @Test
   public void registrarAcessoDeveCriarEventoQueAlimentaContadorDeAcessos()
       throws SQLException {
-    RegistroDAO registroDAO = new RegistroDAO(
-        connection,
-        Clock.fixed(
-            Instant.parse("2026-10-18T19:39:06Z"),
-            ZoneOffset.UTC));
-
-    new AuditoriaService(registroDAO).registrarAcesso(uid);
+    AuditoriaService auditoria = AuditoriaService.getInstancia();
+    auditoria.registrar(connection, 1003, uid, null);
 
     assertEquals(1, new UsuarioDAO(connection).contarAcessos(uid));
-    RegistroAuditoria registro = registroDAO.listar().get(0);
+    RegistroAuditoria registro =
+        new RegistroDAO(connection).listar().get(0);
     assertEquals(1003, registro.getCodigoMensagem());
     assertEquals(
         "Sessão iniciada para <login_name>.",
         registro.getMensagem());
     assertEquals(Integer.valueOf(uid), registro.getUid());
+  }
+
+  @Test
+  public void todosOsCodigosDoEnunciadoDevemEstarDisponiveis()
+      throws SQLException {
+    int[] codigos = {
+        1001, 1002, 1003, 1004, 1005, 1006,
+        2001, 2002, 2003, 2004, 2005,
+        3001, 3002, 3003, 3004, 3005, 3006, 3007,
+        4001, 4002, 4003, 4004, 4005, 4006, 4007,
+        5001, 5002, 5003, 5004,
+        6001, 6002, 6003, 6004, 6005, 6006, 6007, 6008, 6009, 6010,
+        7001, 7002, 7003, 7004, 7005, 7006, 7007, 7008, 7009, 7010,
+        7011, 7012, 7013, 7014, 7015, 7016, 7017, 7018, 7019, 7020,
+        7021,
+        8001, 8002, 8003, 8004
+    };
+    AuditoriaService auditoria = AuditoriaService.getInstancia();
+
+    for (int codigo : codigos) {
+      auditoria.registrar(connection, codigo, uid, null);
+    }
+
+    assertEquals(codigos.length, new RegistroDAO(connection).listar().size());
   }
 }

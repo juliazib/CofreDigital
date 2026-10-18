@@ -19,10 +19,10 @@ import org.junit.Test;
 
 import app.autenticacao.AutenticacaoModel;
 import app.autenticacao.AutenticacaoPresenter;
-import crypto.PasswordUtils;
 import crypto.TOTP;
 import crypto.TokenUtils;
 import database.DatabaseSchema;
+import database.RegistroDAO;
 import database.UsuarioDAO;
 import model.Usuario;
 
@@ -74,6 +74,16 @@ public class AutenticacaoPresenterTest {
     assertEquals(EMAIL, autenticado.getEmail());
     assertTrue(view.avisos.isEmpty());
     assertTrue(caracteresZerados(senha));
+    int uid = usuarioDAO.buscarPorEmail(EMAIL).getUid();
+    assertEventosAnonimos(2001, 1);
+    assertEventos(uid, 2002, 1);
+    assertEventos(uid, 2003, 1);
+    assertEventos(uid, 3001, 1);
+    assertEventos(uid, 3002, 1);
+    assertEventos(uid, 3003, 1);
+    assertEventos(uid, 4001, 1);
+    assertEventos(uid, 4002, 1);
+    assertEventos(uid, 4003, 1);
   }
 
   @Test
@@ -96,6 +106,9 @@ public class AutenticacaoPresenterTest {
     assertEquals(
         0,
         usuarioDAO.buscarPorEmail(EMAIL).getFalhasToken());
+    int uid = usuarioDAO.buscarPorEmail(EMAIL).getUid();
+    assertEventos(uid, 4004, 1);
+    assertEventos(uid, 4003, 1);
   }
 
   @Test
@@ -123,6 +136,9 @@ public class AutenticacaoPresenterTest {
     assertEquals(2, view.emailsSolicitadosParaSenha.size());
     assertEquals(EMAIL, view.emailsSolicitadosParaSenha.get(0));
     assertEquals(EMAIL, view.emailsSolicitadosParaSenha.get(1));
+    int uid = usuarioDAO.buscarPorEmail(EMAIL).getUid();
+    assertEventos(uid, 3004, 1);
+    assertEventos(uid, 3003, 1);
   }
 
   @Test
@@ -143,6 +159,13 @@ public class AutenticacaoPresenterTest {
     assertEquals(
         "Usuário não identificado.",
         view.avisos.get(0));
+    assertEquals(
+        1,
+        new RegistroDAO(connection).listar().stream()
+            .filter(registro -> registro.getUid() == null
+                && registro.getCodigoMensagem() == 2005)
+            .count());
+    assertEventos(usuarioDAO.buscarPorEmail(EMAIL).getUid(), 2003, 1);
   }
 
   @Test
@@ -168,6 +191,9 @@ public class AutenticacaoPresenterTest {
     assertTrue(
         usuarioDAO.buscarPorEmail(EMAIL).estaBloqueado(
             System.currentTimeMillis()));
+    int uid = usuarioDAO.buscarPorEmail(EMAIL).getUid();
+    assertEventos(uid, 4006, 1);
+    assertEventos(uid, 4007, 1);
   }
 
   @Test
@@ -224,10 +250,32 @@ public class AutenticacaoPresenterTest {
     assertTrue(
         usuarioDAO.buscarPorEmail(EMAIL).estaBloqueado(
             System.currentTimeMillis()));
+    int uid = usuarioDAO.buscarPorEmail(EMAIL).getUid();
+    assertEventos(uid, 3004, 1);
+    assertEventos(uid, 3005, 1);
+    assertEventos(uid, 3006, 1);
+    assertEventos(uid, 3007, 1);
   }
 
   private String gerarCodigoValido() throws Exception {
     return new TOTP(SEGREDO_TOTP, 30).generateCode();
+  }
+
+  private void assertEventos(int uid, int codigo, int esperado)
+      throws Exception {
+    assertEquals(
+        esperado,
+        new RegistroDAO(connection).contarEventos(uid, codigo));
+  }
+
+  private void assertEventosAnonimos(int codigo, int esperado)
+      throws Exception {
+    assertEquals(
+        esperado,
+        new RegistroDAO(connection).listar().stream()
+            .filter(registro -> registro.getUid() == null
+                && registro.getCodigoMensagem() == codigo)
+            .count());
   }
 
   private static String gerarHashRapidoParaTeste(String senha) {

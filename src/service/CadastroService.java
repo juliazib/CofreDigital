@@ -109,13 +109,15 @@ public final class CadastroService {
     } catch (Exception erro) {
       throw new ErroDeValidacao(
           "Não foi possível abrir a chave privada. Confira a frase secreta "
-              + "e o arquivo selecionado.");
+              + "e o arquivo selecionado.",
+          6006);
     }
     if (!CertificadoChaveService.validarParChaves(
         chavePrivada,
         certificado)) {
       throw new ErroDeValidacao(
-          "A chave privada não corresponde ao certificado.");
+          "A chave privada não corresponde ao certificado.",
+          6007);
     }
 
     byte[] segredo = new byte[TAMANHO_SEGREDO_TOTP];
@@ -192,25 +194,30 @@ public final class CadastroService {
       char[] fraseSecreta) {
     if (senha == null || senha.length < 8 || senha.length > 10) {
       throw new ErroDeValidacao(
-          "A senha deve conter de 8 a 10 dígitos.");
+          "A senha deve conter de 8 a 10 dígitos.",
+          6003);
     }
     for (char caractere : senha) {
       if (caractere < '0' || caractere > '9') {
         throw new ErroDeValidacao(
-            "A senha pessoal deve conter somente dígitos.");
+            "A senha pessoal deve conter somente dígitos.",
+            6003);
       }
     }
     if (senhaRepetida(senha)) {
       throw new ErroDeValidacao(
-          "A senha não pode conter uma sequência numérica repetida.");
+          "A senha não pode conter uma sequência numérica repetida.",
+          6003);
     }
     if (confirmacaoSenha == null || !Arrays.equals(senha, confirmacaoSenha)) {
       throw new ErroDeValidacao(
-          "A confirmação da senha não corresponde.");
+          "A confirmação da senha não corresponde.",
+          6003);
     }
     if (fraseSecreta == null || fraseSecreta.length == 0) {
       throw new ErroDeValidacao(
-          "Informe a frase secreta da chave privada.");
+          "Informe a frase secreta da chave privada.",
+          6006);
     }
   }
 

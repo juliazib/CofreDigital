@@ -6,6 +6,8 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Window;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.security.cert.X509Certificate;
 
 import javax.swing.JDialog;
@@ -45,11 +47,17 @@ public final class CadastroWindow extends JDialog
         ModalityType.APPLICATION_MODAL);
     this.model = model;
     this.presenter = presenter;
-    setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+    setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
     setMinimumSize(new Dimension(680, 560));
     setSize(800, 660);
     setLocationRelativeTo(owner);
     setContentPane(criarConteudo());
+    addWindowListener(new WindowAdapter() {
+      @Override
+      public void windowClosing(WindowEvent evento) {
+        presenter.voltar();
+      }
+    });
   }
 
   private JPanel criarConteudo() {
@@ -71,8 +79,9 @@ public final class CadastroWindow extends JDialog
     JPanel botoes = new JPanel();
     botaoCadastrar.addActionListener(evento -> presenter.cadastrar());
     botoes.add(botaoCadastrar);
-    JButton botaoFechar = new JButton("Cancelar");
-    botaoFechar.addActionListener(evento -> dispose());
+    JButton botaoFechar = new JButton(
+        model.isCadastroInicial() ? "Cancelar" : "Voltar ao menu");
+    botaoFechar.addActionListener(evento -> presenter.voltar());
     botoes.add(botaoFechar);
     conteudo.add(botoes, BorderLayout.SOUTH);
 

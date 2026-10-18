@@ -22,6 +22,7 @@ import database.DatabaseSchema;
 import database.UsuarioDAO;
 import service.CadastroService;
 import service.CertificadoChaveService;
+import service.ErroDeValidacao;
 
 public class CadastroServiceAdministradorTest {
 
@@ -48,14 +49,15 @@ public class CadastroServiceAdministradorTest {
   @Test
   public void deveRejeitarSenhaComSequenciaNumericaRepetida()
       throws Exception {
-    assertThrows(
-        IllegalArgumentException.class,
+    ErroDeValidacao erro = assertThrows(
+        ErroDeValidacao.class,
         () -> service.cadastrarAdministrador(
             "12341234".toCharArray(),
             "12341234".toCharArray(),
             null,
             null,
             "frase".toCharArray()));
+    assertEquals(6003, erro.getCodigoAuditoria());
     assertEquals(0, usuarioDAO.contarUsuarios());
   }
 

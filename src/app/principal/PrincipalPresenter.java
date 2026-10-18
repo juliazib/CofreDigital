@@ -5,11 +5,14 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.function.Consumer;
 
 import app.cadastro.CadastroModel;
 import app.cadastro.CadastroPresenter;
 import app.pastasegura.PastaSeguraWindow;
 import database.UsuarioDAO;
+import model.Usuario;
+import service.AuditoriaService;
 import service.ContextoAdministrador;
 
 public final class PrincipalPresenter {
@@ -17,8 +20,10 @@ public final class PrincipalPresenter {
   private final Connection connection;
   private final PrincipalModel model;
   private final ContextoAdministrador contextoAdministrador;
+  private final AuditoriaService auditoria;
   private final int totalAcessos;
   private PrincipalWindow janela;
+  private boolean encerrarSistemaSelecionado = true;
 
   public PrincipalPresenter(
       Connection connection,
@@ -33,11 +38,14 @@ public final class PrincipalPresenter {
     this.connection = connection;
     this.model = model;
     this.contextoAdministrador = contextoAdministrador;
+    auditoria = AuditoriaService.getInstancia();
     totalAcessos = new UsuarioDAO(connection).contarAcessos(
         model.getUsuarioAutenticado().getUid());
   }
 
-  public void abrir(Window owner, Runnable aoEncerrarSessao) {
+  public void abrir(
+      Window owner,
+      Consumer<Boolean> aoEncerrar) {
     if (janela != null) {
       throw new IllegalStateException(
           "A janela principal já foi aberta.");
@@ -46,11 +54,12 @@ public final class PrincipalPresenter {
     janela.addWindowListener(new WindowAdapter() {
       @Override
       public void windowClosed(WindowEvent evento) {
-        if (aoEncerrarSessao != null) {
-          aoEncerrarSessao.run();
+        if (aoEncerrar != null) {
+          aoEncerrar.accept(encerrarSistemaSelecionado);
         }
       }
     });
+    registrarEvento(5001);
     janela.setVisible(true);
   }
 
@@ -63,6 +72,7 @@ public final class PrincipalPresenter {
       throw new IllegalStateException(
           "A janela principal ainda não foi aberta.");
     }
+    registrarEvento(5003);
     CadastroPresenter cadastro = new CadastroPresenter(
         connection,
         CadastroModel.cadastroDeUsuario(
@@ -79,6 +89,7 @@ public final class PrincipalPresenter {
       throw new IllegalStateException(
           "O contexto do administrador não está disponível.");
     }
+    registrarEvento(5002);
     PastaSeguraWindow consulta = new PastaSeguraWindow(
         janela,
         connection,
@@ -95,9 +106,47 @@ public final class PrincipalPresenter {
     return totalAcessos;
   }
 
+  public void iniciarSaida() {
+    registrarEvento(5004);
+    registrarEvento(8001);
+  }
+
   public void encerrarSessao() {
+    registrarEvento(8002);
+    registrarEvento(1004);
+    encerrarSistemaSelecionado = false;
+    fecharJanela();
+  }
+
+  public void encerrarSistema() {
+    registrarEvento(8003);
+    registrarEvento(1004);
+    encerrarSistemaSelecionado = true;
+    fecharJanela();
+  }
+
+  public void voltarDaSaida() {
+    registrarEvento(8004);
+  }
+
+  private void fecharJanela() {
     if (janela != null) {
       janela.dispose();
+    }
+  }
+
+  private void registrarEvento(int codigo) {
+    Usuario usuario = model.getUsuarioAutenticado();
+    try {
+      auditoria.registrar(
+          connection,
+          codigo,
+          usuario,
+          null);
+    } catch (SQLException erro) {
+      throw new IllegalStateException(
+          "Não foi possível registrar o evento " + codigo + ".",
+          erro);
     }
   }
 }

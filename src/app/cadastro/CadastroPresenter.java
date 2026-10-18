@@ -4,15 +4,19 @@ import java.awt.Window;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.cert.X509Certificate;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Arrays;
 
 import app.MensagensErro;
+import service.AuditoriaService;
 import service.CadastroService;
 import service.CertificadoChaveService;
+import service.ErroDeValidacao;
 
 public final class CadastroPresenter {
 
@@ -30,12 +34,16 @@ public final class CadastroPresenter {
   private View view;
   private final CadastroService cadastroService;
   private final CadastroModel model;
+  private final Connection connection;
+  private final AuditoriaService auditoria;
 
   public CadastroPresenter(
       Connection connection,
       CadastroModel model) {
+    this.connection = connection;
     cadastroService = new CadastroService(connection);
     this.model = model;
+    auditoria = AuditoriaService.getInstancia();
   }
 
   public void abrir(Window owner, Runnable aoFechar) {
@@ -53,10 +61,14 @@ public final class CadastroPresenter {
         }
       }
     });
+    registrarEvento(6001);
     janela.setVisible(true);
   }
 
   public void cadastrar() {
+    if (!registrarEvento(6002)) {
+      return;
+    }
     char[] senha = null;
     char[] confirmacao = null;
     char[] fraseSecreta = null;
@@ -69,20 +81,59 @@ public final class CadastroPresenter {
       fraseSecreta = model.getFraseSecreta();
       String caminhoCertificado = model.getCaminhoCertificado();
       String caminhoChave = model.getCaminhoChavePrivada();
-      if (caminhoCertificado == null || caminhoCertificado.trim().isEmpty()
-          || caminhoChave == null || caminhoChave.trim().isEmpty()) {
+      if (caminhoCertificado == null || caminhoCertificado.trim().isEmpty()) {
+        if (!registrarEvento(6004)) {
+          return;
+        }
         throw new IllegalArgumentException(
-            "Selecione o certificado e a chave privada.");
+            "Selecione o certificado digital.");
+      }
+      if (caminhoChave == null || caminhoChave.trim().isEmpty()) {
+        if (!registrarEvento(6005)) {
+          return;
+        }
+        throw new IllegalArgumentException(
+            "Selecione a chave privada.");
       }
 
-      String certificadoPem = new String(
-          Files.readAllBytes(new File(caminhoCertificado).toPath()),
-          StandardCharsets.UTF_8);
-      chavePrivadaCifrada =
-          Files.readAllBytes(new File(caminhoChave).toPath());
-      X509Certificate certificado =
-          CertificadoChaveService.validarCertificadoPem(certificadoPem);
-      if (!view.confirmarCertificado(certificado)) {
+      String certificadoPem;
+      try {
+        certificadoPem = new String(
+            Files.readAllBytes(new File(caminhoCertificado).toPath()),
+            StandardCharsets.UTF_8);
+      } catch (IOException erro) {
+        if (!registrarEvento(6004)) {
+          return;
+        }
+        throw erro;
+      }
+
+      try {
+        chavePrivadaCifrada =
+            Files.readAllBytes(new File(caminhoChave).toPath());
+      } catch (IOException erro) {
+        if (!registrarEvento(6005)) {
+          return;
+        }
+        throw erro;
+      }
+
+      X509Certificate certificado;
+      try {
+        certificado =
+            CertificadoChaveService.validarCertificadoPem(certificadoPem);
+      } catch (Exception erro) {
+        if (!registrarEvento(6004)) {
+          return;
+        }
+        throw erro;
+      }
+
+      boolean certificadoAceito = view.confirmarCertificado(certificado);
+      if (!registrarEvento(certificadoAceito ? 6008 : 6009)) {
+        return;
+      }
+      if (!certificadoAceito) {
         return;
       }
 
@@ -104,6 +155,14 @@ public final class CadastroPresenter {
       view.exibirSegredoTotp(segredoTotp);
       view.fechar();
     } catch (Exception erro) {
+      if (erro instanceof ErroDeValidacao) {
+        int codigoAuditoria =
+            ((ErroDeValidacao) erro).getCodigoAuditoria();
+        if (codigoAuditoria != 0
+            && !registrarEvento(codigoAuditoria)) {
+          return;
+        }
+      }
       view.exibirErro(MensagensErro.cadastro(erro));
     } finally {
       limpar(senha);
@@ -115,6 +174,29 @@ public final class CadastroPresenter {
       }
       view.limparCredenciais();
       view.habilitarCadastro(true);
+    }
+  }
+
+  public void voltar() {
+    if (model.isCadastroInicial() || registrarEvento(6010)) {
+      view.fechar();
+    }
+  }
+
+  private boolean registrarEvento(int codigo) {
+    Integer uid = model.isCadastroInicial()
+        ? null
+        : model.getUidAdministrador();
+    try {
+      auditoria.registrar(connection, codigo, uid, null);
+      return true;
+    } catch (SQLException erro) {
+      view.exibirErro(
+          "Não foi possível registrar o evento de auditoria "
+              + codigo
+              + ": "
+              + erro.getMessage());
+      return false;
     }
   }
 

@@ -1,6 +1,7 @@
 package service;
 
 import java.sql.SQLException;
+import java.sql.Connection;
 import java.util.Arrays;
 
 import crypto.PasswordUtils;
@@ -12,29 +13,43 @@ import model.Usuario;
 public class AutenticacaoService {
 
     private final UsuarioDAO usuarioDAO;
+    private final Connection connection;
+    private final AuditoriaService auditoria;
 
-    public AutenticacaoService(UsuarioDAO usuarioDAO) {
+    public AutenticacaoService(
+            UsuarioDAO usuarioDAO,
+            Connection connection) {
+        if (usuarioDAO == null || connection == null) {
+            throw new IllegalArgumentException(
+                "O DAO e a conexão são obrigatórios.");
+        }
         this.usuarioDAO = usuarioDAO;
+        this.connection = connection;
+        auditoria = AuditoriaService.getInstancia();
     }
 
     public boolean iniciarLogin(String email) throws SQLException {
         if (email == null || email.trim().isEmpty()) {
+            registrar(2005, null);
             return false;
         }
 
         Usuario usuario = usuarioDAO.buscarPorEmail(email.trim());
 
         if (usuario == null) {
+            registrar(2005, null);
             return false;
         }
 
         long agora = System.currentTimeMillis();
 
         if (usuario.estaBloqueado(agora)) {
+            registrar(2004, usuario);
             return false;
         }
 
         usuarioDAO.limparBloqueioExpirado(usuario.getUid(), agora);
+        registrar(2003, usuario);
         return true;
     }
 
@@ -52,17 +67,19 @@ public class AutenticacaoService {
         long agora = System.currentTimeMillis();
 
         if (usuario.estaBloqueado(agora)) {
+            registrar(3007, usuario);
             return false;
         }
 
         usuarioDAO.limparBloqueioExpirado(usuario.getUid(), agora);
 
         if (!PasswordUtils.verificarSenha(senha, usuario.getSenhaHash())) {
-            usuarioDAO.registrarFalhaDeSenha(usuario.getUid(), agora);
+            registrarFalhaDeSenha(usuario, agora);
             return false;
         }
 
         usuarioDAO.limparFalhasDeSenha(usuario.getUid());
+        registrar(3003, usuario);
         return true;
     }
 
@@ -80,12 +97,13 @@ public class AutenticacaoService {
 
         long agora = System.currentTimeMillis();
         if (usuario.estaBloqueado(agora)) {
+            registrar(3007, usuario);
             return null;
         }
         usuarioDAO.limparBloqueioExpirado(usuario.getUid(), agora);
 
         if (!paresValidos(pares)) {
-            usuarioDAO.registrarFalhaDeSenha(usuario.getUid(), agora);
+            registrarFalhaDeSenha(usuario, agora);
             return null;
         }
 
@@ -94,10 +112,11 @@ public class AutenticacaoService {
             pares,
             usuario.getSenhaHash());
         if (senhaValida == null) {
-            usuarioDAO.registrarFalhaDeSenha(usuario.getUid(), agora);
+            registrarFalhaDeSenha(usuario, agora);
             return null;
         }
         usuarioDAO.limparFalhasDeSenha(usuario.getUid());
+        registrar(3003, usuario);
         return senhaValida;
     }
 
@@ -156,6 +175,7 @@ public class AutenticacaoService {
         long agoraMillis = System.currentTimeMillis();
 
         if (usuario.estaBloqueado(agoraMillis)) {
+            registrar(4007, usuario);
             return false;
         }
 
@@ -166,38 +186,56 @@ public class AutenticacaoService {
 
         // Só valida o TOTP se a senha pessoal estiver correta.
         if (!PasswordUtils.verificarSenha(senha, usuario.getSenhaHash())) {
-            usuarioDAO.registrarFalhaDeSenha(
-                usuario.getUid(),
-                agoraMillis
-            );
+            registrarFalhaDeSenha(usuario, agoraMillis);
             return false;
         }
 
         usuarioDAO.limparFalhasDeSenha(usuario.getUid());
 
+        String segredoBase32;
+        TOTP totp;
         try {
-            String segredoBase32 = TokenUtils.decifrar(
+            segredoBase32 = TokenUtils.decifrar(
                 usuario.getTokenCifrado(),
-                senha
-            );
-
-            TOTP totp = new TOTP(segredoBase32, 30);
-
-            if (!totp.validateCode(codigoTOTP)) {
-                usuarioDAO.registrarFalhaDeToken(
-                    usuario.getUid(),
-                    agoraMillis
-                );
-                return false;
-            }
-
-            usuarioDAO.limparFalhasDeToken(usuario.getUid());
-            return true;
-
-        } catch (Exception e) {
-            // Falha ao decifrar ou interpretar o segredo.
+                senha);
+            totp = new TOTP(segredoBase32, 30);
+        } catch (Exception erroCriptografico) {
+            registrarFalhaDeToken(usuario, agoraMillis);
             return false;
         }
+
+        if (!totp.validateCode(codigoTOTP)) {
+            registrarFalhaDeToken(usuario, agoraMillis);
+            return false;
+        }
+
+        usuarioDAO.limparFalhasDeToken(usuario.getUid());
+        registrar(4003, usuario);
+        return true;
+    }
+
+    private void registrarFalhaDeSenha(Usuario usuario, long agoraMillis)
+            throws SQLException {
+        int falhasAntes = usuario.getFalhasSenha();
+        usuarioDAO.registrarFalhaDeSenha(usuario.getUid(), agoraMillis);
+        registrar(3004 + Math.min(falhasAntes, 2), usuario);
+        if (falhasAntes >= 2) {
+            registrar(3007, usuario);
+        }
+    }
+
+    private void registrarFalhaDeToken(Usuario usuario, long agoraMillis)
+            throws SQLException {
+        int falhasAntes = usuario.getFalhasToken();
+        usuarioDAO.registrarFalhaDeToken(usuario.getUid(), agoraMillis);
+        registrar(4004 + Math.min(falhasAntes, 2), usuario);
+        if (falhasAntes >= 2) {
+            registrar(4007, usuario);
+        }
+    }
+
+    private void registrar(int codigo, Usuario usuario) throws SQLException {
+        auditoria.registrar(connection, codigo, usuario, null);
     }
 
 }

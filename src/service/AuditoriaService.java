@@ -10,45 +10,140 @@ import model.Usuario;
 
 public final class AuditoriaService {
 
-  private static final int CODIGO_SESSAO_INICIADA = 1003;
+  private static final AuditoriaService INSTANCIA =
+      new AuditoriaService();
   private static final Map<Integer, String> MENSAGENS = criarMensagens();
 
-  private final RegistroDAO registroDAO;
+  private AuditoriaService() {
+  }
 
-  public AuditoriaService(RegistroDAO registroDAO) {
-    if (registroDAO == null) {
-      throw new IllegalArgumentException(
-          "O DAO de registros é obrigatório.");
+  public static AuditoriaService getInstancia() {
+    return INSTANCIA;
+  }
+
+  public void registrar(
+      java.sql.Connection connection,
+      int codigo,
+      Usuario usuario,
+      String arquivo)
+      throws SQLException {
+    registrar(
+        connection,
+        codigo,
+        usuario == null ? null : usuario.getUid(),
+        arquivo);
+  }
+
+  public void registrar(
+      java.sql.Connection connection,
+      int codigo,
+      Integer uid,
+      String arquivo)
+      throws SQLException {
+    if (connection == null) {
+      throw new IllegalArgumentException("A conexão é obrigatória.");
     }
-    this.registroDAO = registroDAO;
-  }
-
-  public void registrarAcesso(int uid) throws SQLException {
-    registrar(CODIGO_SESSAO_INICIADA, uid, null);
-  }
-
-  public void registrar(int codigo, Usuario usuario, String arquivo)
-      throws SQLException {
-    registrar(codigo, usuario == null ? null : usuario.getUid(), arquivo);
-  }
-
-  public void registrar(int codigo, Integer uid, String arquivo)
-      throws SQLException {
     String mensagem = MENSAGENS.get(codigo);
     if (mensagem == null) {
       throw new IllegalArgumentException(
           "Código de auditoria não definido: " + codigo);
     }
-    registroDAO.registrar(codigo, mensagem, uid, arquivo);
+    new RegistroDAO(connection).registrar(codigo, mensagem, uid, arquivo);
   }
 
-  public int contarEventos(int uid, int codigo) throws SQLException {
-    return registroDAO.contarEventos(uid, codigo);
+  public int contarEventos(
+      java.sql.Connection connection,
+      int uid,
+      int codigo) throws SQLException {
+    if (connection == null) {
+      throw new IllegalArgumentException("A conexão é obrigatória.");
+    }
+    return new RegistroDAO(connection).contarEventos(uid, codigo);
   }
 
   private static Map<Integer, String> criarMensagens() {
     Map<Integer, String> mensagens = new HashMap<>();
+    mensagens.put(1001, "Sistema iniciado.");
+    mensagens.put(1002, "Sistema encerrado.");
     mensagens.put(1003, "Sessão iniciada para <login_name>.");
+    mensagens.put(1004, "Sessão encerrada para <login_name>.");
+    mensagens.put(
+        1005,
+        "Partida do sistema iniciada para cadastro do administrador.");
+    mensagens.put(
+        1006,
+        "Partida do sistema iniciada para operação normal pelos usuários.");
+    mensagens.put(2001, "Autenticação etapa 1 iniciada.");
+    mensagens.put(2002, "Autenticação etapa 1 encerrada.");
+    mensagens.put(2003,
+        "Login name <login_name> identificado com acesso liberado.");
+    mensagens.put(2004,
+        "Login name <login_name> identificado com acesso bloqueado.");
+    mensagens.put(2005, "Login name <login_name> não identificado.");
+    mensagens.put(3001,
+        "Autenticação etapa 2 iniciada para <login_name>.");
+    mensagens.put(3002,
+        "Autenticação etapa 2 encerrada para <login_name>.");
+    mensagens.put(3003,
+        "Senha pessoal verificada positivamente para <login_name>.");
+    mensagens.put(3004,
+        "Primeiro erro da senha pessoal contabilizado para <login_name>.");
+    mensagens.put(3005,
+        "Segundo erro da senha pessoal contabilizado para <login_name>.");
+    mensagens.put(3006,
+        "Terceiro erro da senha pessoal contabilizado para <login_name>.");
+    mensagens.put(3007,
+        "Acesso do usuario <login_name> bloqueado pela autenticação etapa 2.");
+    mensagens.put(4001,
+        "Autenticação etapa 3 iniciada para <login_name>.");
+    mensagens.put(4002,
+        "Autenticação etapa 3 encerrada para <login_name>.");
+    mensagens.put(4003,
+        "Token verificado positivamente para <login_name>.");
+    mensagens.put(4004,
+        "Primeiro erro de token contabilizado para <login_name>.");
+    mensagens.put(4005,
+        "Segundo erro de token contabilizado para <login_name>.");
+    mensagens.put(4006,
+        "Terceiro erro de token contabilizado para <login_name>.");
+    mensagens.put(4007,
+        "Acesso do usuario <login_name> bloqueado pela autenticação etapa 3.");
+    mensagens.put(5001, "Tela principal apresentada para <login_name>.");
+    mensagens.put(5002,
+        "Opção 1 do menu principal selecionada por <login_name>.");
+    mensagens.put(5003,
+        "Opção 2 do menu principal selecionada por <login_name>.");
+    mensagens.put(5004,
+        "Opção 3 do menu principal selecionada por <login_name>.");
+    mensagens.put(6001, "Tela de cadastro apresentada para <login_name>.");
+    mensagens.put(6002, "Botão cadastrar pressionado por <login_name>.");
+    mensagens.put(6003,
+        "Senha pessoal inválida fornecida por <login_name>.");
+    mensagens.put(6004,
+        "Caminho do certificado digital inválido fornecido por <login_name>.");
+    mensagens.put(6005,
+        "Chave privada verificada negativamente para <login_name> (caminho inválido).");
+    mensagens.put(6006,
+        "Chave privada verificada negativamente para <login_name> (frase secreta inválida).");
+    mensagens.put(6007,
+        "Chave privada verificada negativamente para <login_name> (assinatura digital inválida).");
+    mensagens.put(6008,
+        "Confirmação de dados aceita por <login_name>.");
+    mensagens.put(6009,
+        "Confirmação de dados rejeitada por <login_name>.");
+    mensagens.put(
+        6010,
+        "Botão voltar de cadastro para o menu principal pressionado por <login_name>.");
+    mensagens.put(8001, "Tela de saída apresentada para <login_name>.");
+    mensagens.put(
+        8002,
+        "Botão encerrar sessão pressionado por <login_name>.");
+    mensagens.put(
+        8003,
+        "Botão encerrar sistema pressionado por <login_name>.");
+    mensagens.put(
+        8004,
+        "Botão voltar de sair para o menu principal pressionado por <login_name>.");
     mensagens.put(7001,
         "Tela de consulta de arquivos secretos apresentada para <login_name>.");
     mensagens.put(7002,

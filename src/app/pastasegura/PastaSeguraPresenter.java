@@ -8,7 +8,6 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 
-import database.RegistroDAO;
 import model.ArquivoSeguro;
 import service.ContextoAdministrador;
 import service.AuditoriaService;
@@ -25,6 +24,7 @@ public final class PastaSeguraPresenter {
 
   private final PastaSeguraModel model;
   private final PastaSeguraService service;
+  private final Connection connection;
   private final AuditoriaService auditoria;
   private final View view;
 
@@ -39,16 +39,17 @@ public final class PastaSeguraPresenter {
           "A conexão, o modelo, o contexto e a interface são obrigatórios.");
     }
     this.model = model;
+    this.connection = connection;
     service = new PastaSeguraService(
         connection,
         contextoAdministrador);
-    auditoria = new AuditoriaService(new RegistroDAO(connection));
+    auditoria = AuditoriaService.getInstancia();
     this.view = view;
   }
 
   public void registrarTelaApresentada() {
     try {
-      auditoria.registrar(7001, model.getUsuario(), null);
+      auditoria.registrar(connection, 7001, model.getUsuario(), null);
       atualizarTotalConsultas();
     } catch (SQLException erro) {
       view.exibirErro("Não foi possível registrar a consulta: "
@@ -66,7 +67,7 @@ public final class PastaSeguraPresenter {
 
   public boolean registrarListarPressionado() {
     try {
-      auditoria.registrar(7003, model.getUsuario(), null);
+      auditoria.registrar(connection, 7003, model.getUsuario(), null);
       atualizarTotalConsultas();
       return true;
     } catch (SQLException erro) {
@@ -80,7 +81,7 @@ public final class PastaSeguraPresenter {
     model.limparConsulta();
     try {
       if (pasta == null) {
-        auditoria.registrar(7004, model.getUsuario(), null);
+        auditoria.registrar(connection, 7004, model.getUsuario(), null);
         throw new IllegalArgumentException(
             "Selecione o caminho da pasta segura.");
       }
@@ -104,7 +105,7 @@ public final class PastaSeguraPresenter {
       return;
     }
     try {
-      auditoria.registrar(7015, model.getUsuario(), nomeArquivo);
+      auditoria.registrar(connection, 7015, model.getUsuario(), nomeArquivo);
       Path arquivo = service.descriptografarArquivo(
           model.getPasta(),
           model.getUsuario(),
@@ -129,6 +130,7 @@ public final class PastaSeguraPresenter {
 
   private void atualizarTotalConsultas() throws SQLException {
     int total = auditoria.contarEventos(
+        connection,
         model.getUsuario().getUid(),
         7003);
     view.atualizarTotalConsultas(total);
@@ -136,7 +138,7 @@ public final class PastaSeguraPresenter {
 
   private void registrarEvento(int codigo, String arquivo) {
     try {
-      auditoria.registrar(codigo, model.getUsuario(), arquivo);
+      auditoria.registrar(connection, codigo, model.getUsuario(), arquivo);
     } catch (SQLException erro) {
       view.exibirErro("Não foi possível registrar o evento: "
           + erro.getMessage());

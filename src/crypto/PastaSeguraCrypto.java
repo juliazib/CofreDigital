@@ -7,6 +7,7 @@ import java.security.Signature;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
+import java.sql.Connection;
 import java.util.Arrays;
 
 import javax.crypto.Cipher;
@@ -26,15 +27,16 @@ public final class PastaSeguraCrypto {
   private final UsuarioDAO usuarioDAO;
   private final ContextoAdministrador contextoAdministrador;
   private final AuditoriaService auditoria;
+  private final Connection connection;
 
   public PastaSeguraCrypto(
-      java.sql.Connection connection,
-      ContextoAdministrador contextoAdministrador,
-      AuditoriaService auditoria) {
+      Connection connection,
+      ContextoAdministrador contextoAdministrador) {
     chaveiroDAO = new ChaveiroDAO(connection);
     usuarioDAO = new UsuarioDAO(connection);
     this.contextoAdministrador = contextoAdministrador;
-    this.auditoria = auditoria;
+    auditoria = AuditoriaService.getInstancia();
+    this.connection = connection;
   }
 
   public PrivateKey validarChaveUsuario(
@@ -103,17 +105,20 @@ public final class PastaSeguraCrypto {
           envelope,
           contextoAdministrador.getChavePrivada());
     } catch (IOException | GeneralSecurityException erro) {
-      auditoria.registrar(codigoFalhaDecriptacao, usuario, null);
+      auditoria.registrar(
+          connection, codigoFalhaDecriptacao, usuario, null);
       throw erro;
     }
-    auditoria.registrar(codigoSucessoDecriptacao, usuario, null);
+    auditoria.registrar(
+        connection, codigoSucessoDecriptacao, usuario, null);
 
     byte[] assinatura;
     try {
       assinatura =
           java.nio.file.Files.readAllBytes(pasta.resolve(nome + ".asd"));
     } catch (IOException erro) {
-      auditoria.registrar(codigoFalhaVerificacao, usuario, null);
+      auditoria.registrar(
+          connection, codigoFalhaVerificacao, usuario, null);
       Arrays.fill(conteudo, (byte) 0);
       throw erro;
     }
@@ -126,16 +131,19 @@ public final class PastaSeguraCrypto {
       verificador.update(conteudo);
       assinaturaValida = verificador.verify(assinatura);
       if (!assinaturaValida) {
-        auditoria.registrar(codigoFalhaVerificacao, usuario, null);
+        auditoria.registrar(
+            connection, codigoFalhaVerificacao, usuario, null);
         falhaVerificacaoRegistrada = true;
         throw new GeneralSecurityException(
             "A assinatura digital do arquivo " + nome + " é inválida.");
       }
-      auditoria.registrar(codigoSucessoVerificacao, usuario, null);
+      auditoria.registrar(
+          connection, codigoSucessoVerificacao, usuario, null);
       return conteudo;
     } catch (GeneralSecurityException erro) {
       if (!assinaturaValida && !falhaVerificacaoRegistrada) {
-        auditoria.registrar(codigoFalhaVerificacao, usuario, null);
+        auditoria.registrar(
+            connection, codigoFalhaVerificacao, usuario, null);
       }
       throw erro;
     } finally {

@@ -14,7 +14,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import database.RegistroDAO;
 import crypto.PastaSeguraCrypto;
 import model.ArquivoSeguro;
 import model.Usuario;
@@ -24,6 +23,7 @@ public final class PastaSeguraService {
 
   private final AuditoriaService auditoria;
   private final PastaSeguraCrypto criptografia;
+  private final Connection connection;
 
   public PastaSeguraService(
       Connection connection,
@@ -32,11 +32,11 @@ public final class PastaSeguraService {
       throw new IllegalArgumentException(
           "A conexão e o contexto do administrador são obrigatórios.");
     }
-    auditoria = new AuditoriaService(new RegistroDAO(connection));
+    this.connection = connection;
+    auditoria = AuditoriaService.getInstancia();
     criptografia = new PastaSeguraCrypto(
         connection,
-        contextoAdministrador,
-        auditoria);
+        contextoAdministrador);
   }
 
   public List<ArquivoSeguro> listarArquivos(
@@ -100,11 +100,11 @@ public final class PastaSeguraService {
       try {
         envelope = Files.readAllBytes(pasta.resolve(nomeEnvelope));
       } catch (IOException erro) {
-        auditoria.registrar(7017, usuario, arquivo.getNome());
+        auditoria.registrar(connection, 7017, usuario, arquivo.getNome());
         throw erro;
       }
 
-      auditoria.registrar(7016, usuario, arquivo.getNome());
+      auditoria.registrar(connection, 7016, usuario, arquivo.getNome());
       try {
         byte[] criptograma =
             Files.readAllBytes(pasta.resolve(codigo + ".enc"));
@@ -113,10 +113,10 @@ public final class PastaSeguraService {
             envelope,
             chaveUsuario);
       } catch (IOException | GeneralSecurityException erro) {
-        auditoria.registrar(7020, usuario, arquivo.getNome());
+        auditoria.registrar(connection, 7020, usuario, arquivo.getNome());
         throw erro;
       }
-      auditoria.registrar(7018, usuario, arquivo.getNome());
+      auditoria.registrar(connection, 7018, usuario, arquivo.getNome());
 
       try {
         byte[] assinatura =
@@ -126,15 +126,15 @@ public final class PastaSeguraService {
             assinatura,
             arquivo.getDono());
       } catch (IOException | GeneralSecurityException | SQLException erro) {
-        auditoria.registrar(7021, usuario, arquivo.getNome());
+        auditoria.registrar(connection, 7021, usuario, arquivo.getNome());
         throw erro;
       }
-      auditoria.registrar(7019, usuario, arquivo.getNome());
+      auditoria.registrar(connection, 7019, usuario, arquivo.getNome());
       return gravarArquivoDescriptografado(pasta, arquivo, conteudo);
     } catch (GeneralSecurityException erro) {
       throw erro;
     } catch (SecurityException erro) {
-      auditoria.registrar(7017, usuario, codigo);
+      auditoria.registrar(connection, 7017, usuario, codigo);
       throw erro;
     } finally {
       if (indice != null) {
@@ -185,8 +185,8 @@ public final class PastaSeguraService {
         }
       }
 
-      auditoria.registrar(7009, usuario, null);
-      auditoria.registrar(7014, usuario, null);
+      auditoria.registrar(connection, 7009, usuario, null);
+      auditoria.registrar(connection, 7014, usuario, null);
       return Collections.unmodifiableList(autorizados);
     } finally {
       limpar(indice);
@@ -245,7 +245,7 @@ public final class PastaSeguraService {
   private void validarPasta(Path pasta, Usuario usuario) throws IOException,
       SQLException {
     if (!Files.isDirectory(pasta)) {
-      auditoria.registrar(7004, usuario, null);
+      auditoria.registrar(connection, 7004, usuario, null);
       throw new IOException("O caminho informado não é uma pasta.");
     }
   }
