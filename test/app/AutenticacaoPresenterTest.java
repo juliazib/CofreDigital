@@ -93,7 +93,7 @@ public class AutenticacaoPresenterTest {
     char[] senhaIncorreta = "senha-errada".toCharArray();
     char[] senhaCorreta = SENHA.toCharArray();
     FakeView view = new FakeView(
-        new String[] { EMAIL, EMAIL },
+        new String[] { EMAIL },
         new char[][] { senhaIncorreta, senhaCorreta },
         new String[] { gerarCodigoValido() });
 
@@ -102,16 +102,21 @@ public class AutenticacaoPresenterTest {
 
     assertEquals(EMAIL, autenticado.getEmail());
     assertEquals(1, view.avisos.size());
-    assertEquals("Senha pessoal incorreta.", view.avisos.get(0));
+    assertEquals(
+        "Senha pessoal incorreta. Tente novamente.",
+        view.avisos.get(0));
     assertTrue(caracteresZerados(senhaIncorreta));
     assertTrue(caracteresZerados(senhaCorreta));
+    assertEquals(2, view.emailsSolicitadosParaSenha.size());
+    assertEquals(EMAIL, view.emailsSolicitadosParaSenha.get(0));
+    assertEquals(EMAIL, view.emailsSolicitadosParaSenha.get(1));
   }
 
   @Test
   public void deveInformarLoginInexistenteEContinuar() throws Exception {
     FakeView view = new FakeView(
         new String[] { "inexistente@example.com", EMAIL },
-        new char[][] { SENHA.toCharArray() },
+        new char[][] { SENHA.toCharArray(), SENHA.toCharArray() },
         new String[] { gerarCodigoValido() });
 
     Usuario autenticado =
@@ -120,14 +125,14 @@ public class AutenticacaoPresenterTest {
     assertEquals(EMAIL, autenticado.getEmail());
     assertEquals(1, view.avisos.size());
     assertEquals(
-        "Usuário não identificado ou acesso temporariamente bloqueado.",
+        "Usuário não identificado.",
         view.avisos.get(0));
   }
 
   @Test
   public void deveInterromperAposTresFalhasDeTotp() throws Exception {
     FakeView view = new FakeView(
-        new String[] { EMAIL, null },
+        new String[] { EMAIL },
         new char[][] { SENHA.toCharArray() },
         new String[] {
             "not-a-code",
@@ -140,7 +145,7 @@ public class AutenticacaoPresenterTest {
 
     assertNull(autenticado);
     assertTrue(view.avisos.contains(
-        "O acesso foi bloqueado por dois minutos após falhas no TOTP."));
+        "Acesso bloqueado por dois minutos após três tentativas incorretas."));
     assertTrue(
         usuarioDAO.buscarPorEmail(EMAIL).estaBloqueado(
             System.currentTimeMillis()));
@@ -168,6 +173,31 @@ public class AutenticacaoPresenterTest {
     assertTrue(view.avisos.isEmpty());
   }
 
+  @Test
+  public void deveAvisarBloqueioAposTresSenhasIncorretas()
+      throws Exception {
+    FakeView view = new FakeView(
+        new String[] { EMAIL },
+        new char[][] {
+            "senha-errada".toCharArray(),
+            "senha-errada".toCharArray(),
+            "senha-errada".toCharArray()
+        },
+        new String[0]);
+
+    Usuario autenticado =
+        new AutenticacaoPresenter(connection, view).autenticar();
+
+    assertNull(autenticado);
+    assertEquals(3, view.avisos.size());
+    assertEquals(
+        "Acesso bloqueado por dois minutos após três tentativas incorretas.",
+        view.avisos.get(2));
+    assertTrue(
+        usuarioDAO.buscarPorEmail(EMAIL).estaBloqueado(
+            System.currentTimeMillis()));
+  }
+
   private String gerarCodigoValido() throws Exception {
     return new TOTP(SEGREDO_TOTP, 30).generateCode();
   }
@@ -188,6 +218,8 @@ public class AutenticacaoPresenterTest {
     private final char[][] senhas;
     private final String[] codigos;
     private final List<String> avisos = new ArrayList<>();
+    private final List<String> emailsSolicitadosParaSenha =
+        new ArrayList<>();
     private int loginAtual;
     private int senhaAtual;
     private int codigoAtual;
@@ -204,11 +236,9 @@ public class AutenticacaoPresenterTest {
     }
 
     @Override
-    public char[] solicitarSenha() {
-      if (senhaAtual >= senhas.length) {
-        return null;
-      }
-      return senhas[senhaAtual++];
+    public char[] solicitarSenha(String email) {
+      emailsSolicitadosParaSenha.add(email);
+      return senhaAtual < senhas.length ? senhas[senhaAtual++] : null;
     }
 
     @Override

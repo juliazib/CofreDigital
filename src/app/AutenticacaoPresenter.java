@@ -12,7 +12,7 @@ public final class AutenticacaoPresenter {
 
   public interface View {
     String solicitarLogin();
-    char[] solicitarSenha();
+    char[] solicitarSenha(String email);
     String solicitarCodigoTotp();
     void exibirAviso(String mensagem);
   }
@@ -29,32 +29,40 @@ public final class AutenticacaoPresenter {
 
   public Usuario autenticar() throws SQLException {
     while (true) {
-      String email = view.solicitarLogin();
-      if (email == null) {
+      String login = view.solicitarLogin();
+      if (login == null) {
         return null;
       }
-
+      String email = login.trim();
       if (!service.iniciarLogin(email)) {
-        view.exibirAviso(
-            "Usuário não identificado ou acesso temporariamente bloqueado.");
+        if (exibirSeBloqueado(email)) {
+          return null;
+        }
+        view.exibirAviso("Usuário não identificado.");
         continue;
       }
 
-      char[] senhaCaracteres = view.solicitarSenha();
-      if (senhaCaracteres == null) {
-        return null;
-      }
+      String senha = null;
+      boolean senhaValida = false;
+      while (!senhaValida) {
+        char[] senhaCaracteres = view.solicitarSenha(email);
+        if (senhaCaracteres == null) {
+          return null;
+        }
 
-      String senha;
-      try {
-        senha = new String(senhaCaracteres);
-      } finally {
-        Arrays.fill(senhaCaracteres, '\0');
-      }
+        try {
+          senha = new String(senhaCaracteres);
+        } finally {
+          Arrays.fill(senhaCaracteres, '\0');
+        }
 
-      if (!service.validarSenha(email, senha)) {
-        view.exibirAviso("Senha pessoal incorreta.");
-        continue;
+        senhaValida = service.validarSenha(email, senha);
+        if (!senhaValida) {
+          if (exibirSeBloqueado(email)) {
+            return null;
+          }
+          view.exibirAviso("Senha pessoal incorreta. Tente novamente.");
+        }
       }
 
       while (true) {
@@ -64,17 +72,25 @@ public final class AutenticacaoPresenter {
         }
 
         if (service.validarToken(email, senha, codigo.trim())) {
-          return usuarioDAO.buscarPorEmail(email.trim());
+          return usuarioDAO.buscarPorEmail(email);
         }
 
-        if (!service.iniciarLogin(email)) {
-          view.exibirAviso(
-              "O acesso foi bloqueado por dois minutos após falhas no TOTP.");
-          break;
+        if (exibirSeBloqueado(email)) {
+          return null;
         }
-
         view.exibirAviso("Código TOTP incorreto.");
       }
     }
+  }
+
+  private boolean exibirSeBloqueado(String email) throws SQLException {
+    Usuario usuario = usuarioDAO.buscarPorEmail(email);
+    if (usuario != null
+        && usuario.estaBloqueado(System.currentTimeMillis())) {
+      view.exibirAviso(
+          "Acesso bloqueado por dois minutos após três tentativas incorretas.");
+      return true;
+    }
+    return false;
   }
 }

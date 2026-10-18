@@ -31,11 +31,11 @@ public final class SwingAutenticacaoView
   }
 
   @Override
-  public char[] solicitarSenha() {
+  public char[] solicitarSenha(String email) {
     CampoSenha campoSenha = new CampoSenha(24, 255);
     int opcao = JOptionPane.showConfirmDialog(
         owner,
-        new Object[] { "Senha pessoal:", campoSenha },
+        new Object[] { "Senha pessoal para " + email + ":", campoSenha },
         "Autenticação",
         JOptionPane.OK_CANCEL_OPTION,
         JOptionPane.PLAIN_MESSAGE);
