@@ -1,13 +1,25 @@
 package test.service;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
+import java.util.Base64;
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 
 import org.junit.Test;
 
@@ -16,55 +28,74 @@ import service.CertificadoChaveService;
 
 public class CertificadoChaveServiceTest {
 
-  private static final String DIR_CERTIFICADOS = "resources/certificados/";
+  private static final String DIR_CERTIFICADOS =
+      "test/resources/certificados/";
 
   @Test
   public void testValidarCertificadoAdmin() throws Exception {
-    Path caminhoCert = Paths.get(DIR_CERTIFICADOS, "admin-x509.crt");
+    String certificadoPem = new String(
+        Files.readAllBytes(Paths.get(
+            DIR_CERTIFICADOS + "admin-x509.crt")),
+        StandardCharsets.UTF_8);
+    X509Certificate certificado =
+        CertificadoChaveService.validarCertificadoPem(certificadoPem);
 
-    if (!Files.exists(caminhoCert)) {
-      caminhoCert = Paths.get("../resources/certificados/admin-x509.crt");
-      if (!Files.exists(caminhoCert)) {
-        caminhoCert = Paths.get("src/test/resources/certificados/admin-x509.crt");
-        if (!Files.exists(caminhoCert)) {
-          return; // Ignora se o ficheiro não estiver presente no ambiente atual
-        }
-      }
-    }
-
-    // Compatível com Java 8 para ler o ficheiro PEM como String
-    String certificadoPem = new String(Files.readAllBytes(caminhoCert), StandardCharsets.UTF_8);
-    X509Certificate certificado = CertificadoChaveService.validarCertificadoPem(certificadoPem);
-
-    assertNotNull("O certificado não deve ser nulo.", certificado);
-
-    String nome = CertificadoUtils.extrairNome(certificado);
-    String email = CertificadoUtils.extrairEmail(certificado);
-
-    assertNotNull("O nome (CN) do certificado deve ser extraído.", nome);
-    assertNotNull("O e-mail do certificado deve ser extraído.", email);
+    assertNotNull(certificado);
+    assertNotNull(CertificadoUtils.extrairNome(certificado));
+    assertTrue(CertificadoUtils.extrairEmail(certificado).contains("@"));
   }
 
   @Test
   public void testDescriptografarChaveSenhaIncorreta() throws Exception {
-    Path caminhoChave = Paths.get(DIR_CERTIFICADOS, "admin-pkcs8-aes.key");
+    byte[] chaveCifrada = Files.readAllBytes(Paths.get(
+        DIR_CERTIFICADOS + "admin-pkcs8-aes.key"));
 
-    if (!Files.exists(caminhoChave)) {
-      caminhoChave = Paths.get("../resources/certificados/admin-pkcs8-aes.key");
-      if (!Files.exists(caminhoChave)) {
-        caminhoChave = Paths.get("src/test/resources/certificados/admin-pkcs8-aes.key");
-        if (!Files.exists(caminhoChave)) {
-          return;
-        }
-      }
+    assertThrows(
+        Exception.class,
+        () -> CertificadoChaveService.descriptografarChavePrivada(
+            chaveCifrada,
+            "senhaIncorretaXYZ"));
+  }
+
+  @Test
+  public void deveDescriptografarChavePkcs8Binaria() throws Exception {
+    char[] fraseSecreta = "frase-de-teste".toCharArray();
+    KeyPair parChaves = gerarParChaves();
+    byte[] conteudoPem = criarPemPkcs8(parChaves);
+    byte[] chaveCifrada = cifrarChaveDeTeste(conteudoPem, fraseSecreta);
+
+    try {
+      assertArrayEquals(
+          parChaves.getPrivate().getEncoded(),
+          CertificadoChaveService.descriptografarChavePrivada(
+              chaveCifrada,
+              fraseSecreta).getEncoded());
+    } finally {
+      Arrays.fill(fraseSecreta, '\0');
+      Arrays.fill(conteudoPem, (byte) 0);
+      Arrays.fill(chaveCifrada, (byte) 0);
     }
+  }
 
-    byte[] chaveCifrada = Files.readAllBytes(caminhoChave);
+  @Test
+  public void deveRejeitarFraseIncorretaParaChaveBinaria() throws Exception {
+    char[] fraseCorreta = "frase-de-teste".toCharArray();
+    char[] fraseIncorreta = "outra-frase".toCharArray();
+    byte[] conteudoPem = criarPemPkcs8(gerarParChaves());
+    byte[] chaveCifrada = cifrarChaveDeTeste(conteudoPem, fraseCorreta);
 
-    // Tentativa de descriptografia com senha inválida deve lançar exceção
-    assertThrows(Exception.class, () -> {
-      CertificadoChaveService.descriptografarChavePrivada(chaveCifrada, "senhaIncorretaXYZ");
-    });
+    try {
+      assertThrows(
+          Exception.class,
+          () -> CertificadoChaveService.descriptografarChavePrivada(
+              chaveCifrada,
+              fraseIncorreta));
+    } finally {
+      Arrays.fill(fraseCorreta, '\0');
+      Arrays.fill(fraseIncorreta, '\0');
+      Arrays.fill(conteudoPem, (byte) 0);
+      Arrays.fill(chaveCifrada, (byte) 0);
+    }
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -85,5 +116,47 @@ public class CertificadoChaveServiceTest {
   @Test(expected = IllegalArgumentException.class)
   public void testDescriptografarChaveVazia() throws Exception {
     CertificadoChaveService.descriptografarChavePrivada(new byte[0], "senha");
+  }
+
+  private static KeyPair gerarParChaves() throws Exception {
+    KeyPairGenerator gerador = KeyPairGenerator.getInstance("RSA");
+    gerador.initialize(2048);
+    return gerador.generateKeyPair();
+  }
+
+  private static byte[] criarPemPkcs8(KeyPair parChaves) {
+    String codificada = Base64.getMimeEncoder(
+        64,
+        new byte[] { '\n' }).encodeToString(
+            parChaves.getPrivate().getEncoded());
+    return ("-----BEGIN PRIVATE KEY-----\n"
+        + codificada
+        + "\n-----END PRIVATE KEY-----\n")
+            .getBytes(StandardCharsets.US_ASCII);
+  }
+
+  private static byte[] cifrarChaveDeTeste(
+      byte[] texto,
+      char[] fraseSecreta) throws Exception {
+    ByteBuffer codificado =
+        StandardCharsets.UTF_8.encode(CharBuffer.wrap(fraseSecreta));
+    byte[] semente = new byte[codificado.remaining()];
+    codificado.get(semente);
+    try {
+      SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
+      random.setSeed(semente);
+      KeyGenerator geradorChave = KeyGenerator.getInstance("AES");
+      geradorChave.init(256, random);
+      SecretKey chave = geradorChave.generateKey();
+
+      Cipher cifra = Cipher.getInstance("AES/ECB/PKCS5Padding");
+      cifra.init(Cipher.ENCRYPT_MODE, chave);
+      return cifra.doFinal(texto);
+    } finally {
+      Arrays.fill(semente, (byte) 0);
+      if (codificado.hasArray()) {
+        Arrays.fill(codificado.array(), (byte) 0);
+      }
+    }
   }
 }

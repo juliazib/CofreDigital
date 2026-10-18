@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.util.Arrays;
 
 import crypto.Base32;
+import crypto.CertificadoUtils;
 import crypto.PasswordUtils;
 import crypto.TokenUtils;
 import database.UsuarioDAO;
@@ -30,27 +31,27 @@ public final class CadastroAdministradorService {
   }
 
   public String cadastrar(
-      String nome,
-      String email,
       char[] senha,
       char[] confirmacaoSenha,
       String certificadoPem,
       byte[] chavePrivadaCifrada,
       char[] fraseSecreta) throws Exception {
-    validarDados(nome, email, senha, confirmacaoSenha, fraseSecreta);
+    validarDados(senha, confirmacaoSenha, fraseSecreta);
     if (usuarioDAO.existeAdministrador()) {
       throw new IllegalStateException(
           "Já existe um administrador cadastrado.");
     }
 
     String senhaTexto = new String(senha);
-    String fraseSecretaTexto = new String(fraseSecreta);
     X509Certificate certificado =
         CertificadoChaveService.validarCertificadoPem(certificadoPem);
+    String nome = CertificadoUtils.extrairNome(certificado);
+    String email = CertificadoUtils.extrairEmail(certificado);
+    validarIdentidadeCertificado(nome, email);
     PrivateKey chavePrivada = CertificadoChaveService
         .descriptografarChavePrivada(
             chavePrivadaCifrada,
-            fraseSecretaTexto);
+            fraseSecreta);
 
     if (!CertificadoChaveService.validarParChaves(
         chavePrivada,
@@ -83,18 +84,9 @@ public final class CadastroAdministradorService {
   }
 
   private void validarDados(
-      String nome,
-      String email,
       char[] senha,
       char[] confirmacaoSenha,
-      char[] fraseSecreta) throws SQLException {
-    if (nome == null || nome.trim().isEmpty()) {
-      throw new IllegalArgumentException("Informe o nome do administrador.");
-    }
-    if (email == null || !email.trim().matches(
-        "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
-      throw new IllegalArgumentException("Informe um e-mail válido.");
-    }
+      char[] fraseSecreta) {
     if (senha == null || senha.length < 8 || senha.length > 10) {
       throw new IllegalArgumentException(
           "A senha deve conter de 8 a 10 dígitos.");
@@ -116,6 +108,19 @@ public final class CadastroAdministradorService {
     if (fraseSecreta == null || fraseSecreta.length == 0) {
       throw new IllegalArgumentException(
           "Informe a frase secreta da chave privada.");
+    }
+  }
+
+  private void validarIdentidadeCertificado(String nome, String email)
+      throws SQLException {
+    if (nome == null || nome.trim().isEmpty()) {
+      throw new IllegalArgumentException(
+          "O certificado não contém o nome do administrador.");
+    }
+    if (email == null || !email.trim().matches(
+        "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+      throw new IllegalArgumentException(
+          "O certificado não contém um e-mail válido.");
     }
     if (usuarioDAO.existeEmail(email.trim())) {
       throw new IllegalArgumentException(

@@ -1,6 +1,7 @@
 package crypto;
 
 import java.security.cert.X509Certificate;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
 import javax.naming.ldap.LdapName;
@@ -34,7 +35,7 @@ public class CertificadoUtils {
             if ("EMAILADDRESS".equalsIgnoreCase(tipo)
                     || "E".equalsIgnoreCase(tipo)
                     || "1.2.840.113549.1.9.1".equals(tipo)) {
-                return rdn.getValue().toString();
+                return valorTexto(rdn.getValue());
             }
         }
 
@@ -51,5 +52,33 @@ public class CertificadoUtils {
         }
 
         return null;
+    }
+
+    private static String valorTexto(Object valor) {
+        if (!(valor instanceof byte[])) {
+            return String.valueOf(valor);
+        }
+
+        byte[] codificado = (byte[]) valor;
+        int deslocamento = 0;
+        int tamanho = codificado.length;
+        if (tamanho >= 2 && (codificado[0] == 0x0c
+                || codificado[0] == 0x13
+                || codificado[0] == 0x16)) {
+            deslocamento = 2;
+            int tamanhoDeclarado = codificado[1] & 0xff;
+            if ((tamanhoDeclarado & 0x80) == 0
+                    && tamanhoDeclarado <= tamanho - deslocamento) {
+                tamanho = tamanhoDeclarado;
+            } else {
+                deslocamento = 0;
+                tamanho = codificado.length;
+            }
+        }
+        return new String(
+                codificado,
+                deslocamento,
+                tamanho,
+                StandardCharsets.UTF_8);
     }
 }

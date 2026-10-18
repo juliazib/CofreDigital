@@ -13,14 +13,13 @@ import service.CertificadoChaveService;
 public final class CadastroPresenter {
 
   public interface View {
-    String getNome();
-    String getEmail();
     String getCaminhoCertificado();
     String getCaminhoChavePrivada();
     char[] getSenha();
     char[] getConfirmacaoSenha();
     char[] getFraseSecreta();
-    boolean confirmarCertificado(X509Certificate certificado);
+    boolean confirmarCertificado(X509Certificate certificado)
+        throws Exception;
     void exibirSegredoTotp(String segredo);
     void exibirErro(String mensagem);
     void limparCredenciais();
@@ -62,8 +61,6 @@ public final class CadastroPresenter {
 
       view.habilitarCadastro(false);
       String segredoTotp = cadastroService.cadastrar(
-          view.getNome(),
-          view.getEmail(),
           senha,
           confirmacao,
           certificadoPem,

@@ -23,11 +23,11 @@ import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 
+import crypto.CertificadoUtils;
+
 public final class CadastroWindow extends JFrame
     implements CadastroPresenter.View {
 
-  private final JTextField nome = campoTexto(100);
-  private final JTextField email = campoTexto(255);
   private final JTextField caminhoCertificado = campoTexto(255);
   private final JTextField caminhoChavePrivada = campoTexto(255);
   private final JPasswordField fraseSecreta = campoSenha(255);
@@ -41,7 +41,7 @@ public final class CadastroWindow extends JFrame
     this.presenter = new CadastroPresenter(connection, this);
     setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     setMinimumSize(new Dimension(680, 500));
-    setSize(800, 620);
+    setSize(800, 560);
     setLocationRelativeTo(null);
     setContentPane(criarConteudo(totalUsuarios));
   }
@@ -90,28 +90,26 @@ public final class CadastroWindow extends JFrame
     formulario.setBorder(BorderFactory.createTitledBorder(
         "Formulário de Cadastro"));
 
-    adicionarLinha(formulario, 0, "Nome:", nome);
-    adicionarLinha(formulario, 1, "E-mail:", email);
     adicionarLinha(
         formulario,
-        2,
+        0,
         "Caminho do arquivo do certificado digital:",
         seletorArquivo(caminhoCertificado));
     adicionarLinha(
         formulario,
-        3,
+        1,
         "Caminho do arquivo da chave privada:",
         seletorArquivo(caminhoChavePrivada));
     adicionarLinha(
         formulario,
-        4,
+        2,
         "Frase secreta:",
         fraseSecreta);
-    adicionarLinha(formulario, 5, "Grupo:", new JLabel("Administrador"));
-    adicionarLinha(formulario, 6, "Senha pessoal (8 a 10 dígitos):", senhaPessoal);
+    adicionarLinha(formulario, 3, "Grupo:", new JLabel("Administrador"));
+    adicionarLinha(formulario, 4, "Senha pessoal (8 a 10 dígitos):", senhaPessoal);
     adicionarLinha(
         formulario,
-        7,
+        5,
         "Confirmação da senha pessoal:",
         confirmacaoSenha);
 
@@ -131,16 +129,6 @@ public final class CadastroWindow extends JFrame
     seletor.add(campo, BorderLayout.CENTER);
     seletor.add(botaoSelecionar, BorderLayout.EAST);
     return seletor;
-  }
-
-  @Override
-  public String getNome() {
-    return nome.getText();
-  }
-
-  @Override
-  public String getEmail() {
-    return email.getText();
   }
 
   @Override
@@ -169,14 +157,19 @@ public final class CadastroWindow extends JFrame
   }
 
   @Override
-  public boolean confirmarCertificado(X509Certificate certificado) {
-    String detalhes = "Titular: " + certificado.getSubjectX500Principal()
-        + "\nEmissor: " + certificado.getIssuerX500Principal()
+  public boolean confirmarCertificado(X509Certificate certificado)
+      throws Exception {
+    String nome = CertificadoUtils.extrairNome(certificado);
+    String email = CertificadoUtils.extrairEmail(certificado);
+    String detalhes = "Versão: " + certificado.getVersion()
         + "\nSérie: " + certificado.getSerialNumber()
         + "\nVálido de: " + certificado.getNotBefore()
         + "\nVálido até: " + certificado.getNotAfter()
-        + "\nAlgoritmo de assinatura: "
+        + "\nTipo de assinatura: "
         + certificado.getSigAlgName()
+        + "\nEmissor: " + certificado.getIssuerX500Principal()
+        + "\nSujeito: " + nome
+        + "\nE-mail: " + email
         + "\n\nDeseja prosseguir com este certificado?";
     return JOptionPane.showConfirmDialog(
         this,

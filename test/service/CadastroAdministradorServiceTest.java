@@ -51,8 +51,6 @@ public class CadastroAdministradorServiceTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> service.cadastrar(
-            "Admin",
-            "admin@example.com",
             "12341234".toCharArray(),
             "12341234".toCharArray(),
             null,
@@ -66,8 +64,6 @@ public class CadastroAdministradorServiceTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> service.cadastrar(
-            "Admin",
-            "admin@example.com",
             "1234abcd".toCharArray(),
             "1234abcd".toCharArray(),
             null,
@@ -89,8 +85,6 @@ public class CadastroAdministradorServiceTest {
     assertThrows(
         IllegalStateException.class,
         () -> service.cadastrar(
-            "Novo Admin",
-            "novo@example.com",
             "12345678".toCharArray(),
             "12345678".toCharArray(),
             null,

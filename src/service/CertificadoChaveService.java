@@ -1,8 +1,12 @@
 package service;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
 import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -11,7 +15,14 @@ import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.Base64;
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -84,16 +95,36 @@ public class CertificadoChaveService {
    * usando a frase secreta.
    */
   public static PrivateKey descriptografarChavePrivada(byte[] chavePrivadaCifrada, String senha) throws Exception {
-    if (chavePrivadaCifrada == null || chavePrivadaCifrada.length == 0) {
-      throw new IllegalArgumentException("A chave privada cifrada não pode ser vazia.");
-    }
     if (senha == null) {
       throw new IllegalArgumentException("A senha para descriptografar a chave privada não pode ser nula.");
     }
-
-    if (Security.getProvider("BC") == null) {
-      Security.addProvider(new BouncyCastleProvider());
+    char[] senhaCaracteres = senha.toCharArray();
+    try {
+      return descriptografarChavePrivada(
+          chavePrivadaCifrada,
+          senhaCaracteres);
+    } finally {
+      Arrays.fill(senhaCaracteres, '\0');
     }
+  }
+
+  public static PrivateKey descriptografarChavePrivada(
+      byte[] chavePrivadaCifrada,
+      char[] fraseSecreta) throws Exception {
+    if (chavePrivadaCifrada == null || chavePrivadaCifrada.length == 0) {
+      throw new IllegalArgumentException("A chave privada cifrada não pode ser vazia.");
+    }
+    if (fraseSecreta == null) {
+      throw new IllegalArgumentException("A senha para descriptografar a chave privada não pode ser nula.");
+    }
+
+    if (!comecaComPem(chavePrivadaCifrada)) {
+      return descriptografarChaveBinaria(
+          chavePrivadaCifrada,
+          fraseSecreta);
+    }
+
+    registrarProviderBouncyCastle();
 
     try (PEMParser pemParser = new PEMParser(new InputStreamReader(
         new ByteArrayInputStream(chavePrivadaCifrada), StandardCharsets.UTF_8))) {
@@ -105,19 +136,33 @@ public class CertificadoChaveService {
         // Formato PKCS#8 cifrado com AES (comum em admin-pkcs8-aes.key /
         // user01-pkcs8-aes.key)
         PKCS8EncryptedPrivateKeyInfo encryptedPrivateKeyInfo = (PKCS8EncryptedPrivateKeyInfo) obj;
-        org.bouncycastle.operator.InputDecryptorProvider decProv = new JceOpenSSLPKCS8DecryptorProviderBuilder()
-            .setProvider("BC")
-            .build(senha.toCharArray());
-        PrivateKeyInfo privateKeyInfo = encryptedPrivateKeyInfo.decryptPrivateKeyInfo(decProv);
+        char[] senhaTemporaria = fraseSecreta.clone();
+        PrivateKeyInfo privateKeyInfo;
+        try {
+          org.bouncycastle.operator.InputDecryptorProvider decProv =
+              new JceOpenSSLPKCS8DecryptorProviderBuilder()
+                  .setProvider("BC")
+                  .build(senhaTemporaria);
+          privateKeyInfo =
+              encryptedPrivateKeyInfo.decryptPrivateKeyInfo(decProv);
+        } finally {
+          Arrays.fill(senhaTemporaria, '\0');
+        }
         return converter.getPrivateKey(privateKeyInfo);
 
       } else if (obj instanceof PEMEncryptedKeyPair) {
         // Formato tradicional OpenSSL cifrado
         PEMEncryptedKeyPair encryptedKeyPair = (PEMEncryptedKeyPair) obj;
-        PEMDecryptorProvider decProv = new JcePEMDecryptorProviderBuilder()
-            .setProvider("BC")
-            .build(senha.toCharArray());
-        PEMKeyPair pemKeyPair = encryptedKeyPair.decryptKeyPair(decProv);
+        char[] senhaTemporaria = fraseSecreta.clone();
+        PEMKeyPair pemKeyPair;
+        try {
+          PEMDecryptorProvider decProv = new JcePEMDecryptorProviderBuilder()
+              .setProvider("BC")
+              .build(senhaTemporaria);
+          pemKeyPair = encryptedKeyPair.decryptKeyPair(decProv);
+        } finally {
+          Arrays.fill(senhaTemporaria, '\0');
+        }
         return converter.getPrivateKey(pemKeyPair.getPrivateKeyInfo());
 
       } else if (obj instanceof PrivateKeyInfo) {
@@ -133,5 +178,133 @@ public class CertificadoChaveService {
             (obj != null ? obj.getClass().getName() : "nulo"));
       }
     }
+  }
+
+  private static PrivateKey descriptografarChaveBinaria(
+      byte[] chaveCifrada,
+      char[] fraseSecreta) throws GeneralSecurityException {
+    try {
+      SecretKey chaveAes = gerarChaveAes(fraseSecreta);
+
+      Cipher cifra = Cipher.getInstance("AES/ECB/PKCS5Padding");
+      cifra.init(Cipher.DECRYPT_MODE, chaveAes);
+      byte[] chavePrivadaCodificada = cifra.doFinal(chaveCifrada);
+      try {
+        if (comecaComPem(chavePrivadaCodificada)) {
+          registrarProviderBouncyCastle();
+          try (PEMParser pemParser = new PEMParser(new InputStreamReader(
+              new ByteArrayInputStream(chavePrivadaCodificada),
+              StandardCharsets.US_ASCII))) {
+            Object chavePem = pemParser.readObject();
+            JcaPEMKeyConverter converter =
+                new JcaPEMKeyConverter().setProvider("BC");
+            if (chavePem instanceof PrivateKeyInfo) {
+              return converter.getPrivateKey((PrivateKeyInfo) chavePem);
+            }
+            if (chavePem instanceof PEMKeyPair) {
+              return converter.getKeyPair((PEMKeyPair) chavePem).getPrivate();
+            }
+            throw new GeneralSecurityException(
+                "O arquivo não contém uma chave privada PKCS#8 válida.");
+          } catch (IOException erro) {
+            throw new GeneralSecurityException(
+                "Não foi possível ler a chave privada PKCS#8 descriptografada.",
+                erro);
+          }
+        }
+
+        byte[] chavePrivadaBase64 =
+            removerEspacosAscii(chavePrivadaCodificada);
+        byte[] chavePrivadaDer = null;
+        try {
+          chavePrivadaDer = Base64.getDecoder().decode(
+              chavePrivadaBase64);
+          return KeyFactory.getInstance("RSA").generatePrivate(
+              new PKCS8EncodedKeySpec(chavePrivadaDer));
+        } finally {
+          Arrays.fill(chavePrivadaBase64, (byte) 0);
+          if (chavePrivadaDer != null) {
+            Arrays.fill(chavePrivadaDer, (byte) 0);
+          }
+        }
+      } finally {
+        Arrays.fill(chavePrivadaCodificada, (byte) 0);
+      }
+    } catch (GeneralSecurityException erro) {
+      throw new GeneralSecurityException(
+          "Não foi possível descriptografar a chave privada. " +
+              "Verifique a frase secreta e o formato do arquivo.",
+          erro);
+    } catch (IllegalArgumentException erro) {
+      throw new GeneralSecurityException(
+          "A chave privada descriptografada não contém PKCS#8 válido.",
+          erro);
+    }
+  }
+
+  private static SecretKey gerarChaveAes(char[] fraseSecreta)
+      throws GeneralSecurityException {
+    ByteBuffer codificado =
+        StandardCharsets.UTF_8.encode(CharBuffer.wrap(fraseSecreta));
+    byte[] semente = new byte[codificado.remaining()];
+    codificado.get(semente);
+    try {
+      SecureRandom geradorAleatorio =
+          SecureRandom.getInstance("SHA1PRNG");
+      geradorAleatorio.setSeed(semente);
+
+      KeyGenerator geradorChave = KeyGenerator.getInstance("AES");
+      geradorChave.init(256, geradorAleatorio);
+      return geradorChave.generateKey();
+    } finally {
+      Arrays.fill(semente, (byte) 0);
+      if (codificado.hasArray()) {
+        Arrays.fill(codificado.array(), (byte) 0);
+      }
+    }
+  }
+
+  private static byte[] removerEspacosAscii(byte[] dados) {
+    int tamanho = 0;
+    for (byte dado : dados) {
+      if (dado == ' ' || dado == '\t' || dado == '\r' || dado == '\n') {
+        continue;
+      }
+      tamanho++;
+    }
+
+    byte[] resultado = new byte[tamanho];
+    int indice = 0;
+    for (byte dado : dados) {
+      if (dado != ' ' && dado != '\t' && dado != '\r' && dado != '\n') {
+        resultado[indice++] = dado;
+      }
+    }
+    return resultado;
+  }
+
+  private static void registrarProviderBouncyCastle() {
+    if (Security.getProvider("BC") == null) {
+      Security.addProvider(new BouncyCastleProvider());
+    }
+  }
+
+  private static boolean comecaComPem(byte[] conteudo) {
+    byte[] cabecalhoPem = "-----BEGIN ".getBytes(StandardCharsets.US_ASCII);
+    int inicio = 0;
+    while (inicio < conteudo.length
+        && (conteudo[inicio] == ' ' || conteudo[inicio] == '\t'
+            || conteudo[inicio] == '\r' || conteudo[inicio] == '\n')) {
+      inicio++;
+    }
+    if (conteudo.length - inicio < cabecalhoPem.length) {
+      return false;
+    }
+    for (int i = 0; i < cabecalhoPem.length; i++) {
+      if (conteudo[inicio + i] != cabecalhoPem[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 }
