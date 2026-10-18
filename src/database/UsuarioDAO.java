@@ -47,6 +47,15 @@ public class UsuarioDAO {
     }
   }
 
+  public Usuario buscarAdministrador() throws SQLException {
+    String sql = SELECT_USUARIO + "WHERE u.GID = 1 LIMIT 1";
+
+    try (Statement statement = connection.createStatement();
+        ResultSet result = statement.executeQuery(sql)) {
+      return result.next() ? mapearUsuario(result) : null;
+    }
+  }
+
   public boolean existeEmail(String email) throws SQLException {
     String sql = "SELECT 1 FROM Usuarios WHERE email = ?";
 

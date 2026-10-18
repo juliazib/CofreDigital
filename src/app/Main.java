@@ -11,6 +11,7 @@ import javax.swing.SwingUtilities;
 import database.Database;
 import database.DatabaseSchema;
 import database.UsuarioDAO;
+import service.ContextoAdministrador;
 
 public class Main {
   public static void main(String[] args) {
@@ -25,13 +26,7 @@ public class Main {
 
       SwingUtilities.invokeLater(() -> {
         if (administradorCadastrado) {
-          JOptionPane.showMessageDialog(
-              null,
-              "Já existe um administrador cadastrado. " +
-                  "A tela de autenticação ainda não está disponível.",
-              "Cofre Digital",
-              JOptionPane.INFORMATION_MESSAGE);
-          fecharConexao(conexaoAplicacao);
+          iniciarComAdministrador(conexaoAplicacao);
           return;
         }
 
@@ -48,6 +43,16 @@ public class Main {
     } catch (SQLException e) {
       System.err.println(
           "Erro ao inicializar o banco de dados: " + e.getMessage());
+      fecharConexao(connection);
+    }
+  }
+
+  private static void iniciarComAdministrador(Connection connection) {
+    InicializacaoPresenter presenter = new InicializacaoPresenter(
+        connection,
+        new SwingInicializacaoView(null));
+    try (ContextoAdministrador contexto = presenter.validarAdministrador()) {
+    } finally {
       fecharConexao(connection);
     }
   }
