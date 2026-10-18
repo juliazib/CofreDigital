@@ -1,4 +1,4 @@
-package app.mainWindow;
+package app.principal;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -13,12 +13,12 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
-public final class MainWindow extends JFrame {
+public final class PrincipalWindow extends JFrame {
 
-  MainWindow(
+  PrincipalWindow(
       Window owner,
-      MainWindowModel model,
-      MainWindowPresenter presenter) {
+      PrincipalModel model,
+      PrincipalPresenter presenter) {
     super("Cofre Digital");
     setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     setMinimumSize(new Dimension(520, 340));
@@ -28,8 +28,8 @@ public final class MainWindow extends JFrame {
   }
 
   private JPanel criarConteudo(
-      MainWindowModel model,
-      MainWindowPresenter presenter) {
+      PrincipalModel model,
+      PrincipalPresenter presenter) {
     JPanel conteudo = new JPanel(new BorderLayout(12, 12));
     conteudo.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
 

@@ -1,11 +1,12 @@
 package app.autenticacao;
 
 import java.awt.Window;
+import java.util.Arrays;
 
 import javax.swing.JOptionPane;
 
-import app.ui.componentes.CampoSenha;
 import app.ui.componentes.CampoTexto;
+import app.ui.componentes.EntradaSenhaVirtual;
 
 public final class AutenticacaoWindow
     implements AutenticacaoPresenter.View {
@@ -34,25 +35,15 @@ public final class AutenticacaoWindow
 
   @Override
   public boolean solicitarSenha(AutenticacaoModel model) {
-    CampoSenha campoSenha = new CampoSenha(24, 255);
-    int opcao = JOptionPane.showConfirmDialog(
-        owner,
-        new Object[] {
-            "Senha pessoal para " + model.getEmail() + ":",
-            campoSenha
-        },
-        "Autenticação",
-        JOptionPane.OK_CANCEL_OPTION,
-        JOptionPane.PLAIN_MESSAGE);
-    if (opcao != JOptionPane.OK_OPTION) {
-      campoSenha.limpar();
+    char[] senha = EntradaSenhaVirtual.solicitarSenha(owner, 8, 10);
+    if (senha == null) {
       return false;
     }
-
-    char[] senha = campoSenha.getPassword();
-    campoSenha.limpar();
-    model.preencherSenha(senha);
-    java.util.Arrays.fill(senha, '\0');
+    try {
+      model.preencherSenha(senha);
+    } finally {
+      Arrays.fill(senha, '\0');
+    }
     return true;
   }
 

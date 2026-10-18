@@ -44,19 +44,21 @@ public class CertificadoChaveService {
    */
   public static X509Certificate validarCertificadoPem(String certificadoPem) throws Exception {
     if (certificadoPem == null || certificadoPem.trim().isEmpty()) {
-      throw new IllegalArgumentException("O certificado PEM não pode ser vazio.");
+      throw new ErroDeValidacao("Selecione o arquivo do certificado.");
     }
 
-    CertificateFactory factory = CertificateFactory.getInstance("X.509");
-    try (ByteArrayInputStream bais = new ByteArrayInputStream(certificadoPem.getBytes(StandardCharsets.UTF_8))) {
-      X509Certificate certificado = (X509Certificate) factory.generateCertificate(bais);
-
-      // Valida o período de validade
-      certificado.checkValidity(new Date());
-
-      return certificado;
-    } catch (Exception e) {
-      throw new Exception("Certificado X.509 inválido ou expirado: " + e.getMessage(), e);
+    try {
+      CertificateFactory factory = CertificateFactory.getInstance("X.509");
+      try (ByteArrayInputStream bais = new ByteArrayInputStream(
+          certificadoPem.getBytes(StandardCharsets.UTF_8))) {
+        X509Certificate certificado =
+            (X509Certificate) factory.generateCertificate(bais);
+        certificado.checkValidity(new Date());
+        return certificado;
+      }
+    } catch (Exception erro) {
+      throw new ErroDeValidacao(
+          "O certificado selecionado é inválido, expirou ou ainda não é válido.");
     }
   }
 

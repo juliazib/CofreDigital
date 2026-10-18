@@ -24,7 +24,8 @@ public final class CadastroService {
 
   public CadastroService(Connection connection) {
     if (connection == null) {
-      throw new IllegalArgumentException("A conexão não pode ser nula.");
+      throw new ErroDeValidacao(
+          "Não foi possível iniciar o cadastro. Tente novamente.");
     }
     this.connection = connection;
     usuarioDAO = new UsuarioDAO(connection);
@@ -84,23 +85,36 @@ public final class CadastroService {
       int gid) throws Exception {
     validarCredenciais(senha, confirmacaoSenha, fraseSecreta);
     if (gid != 1 && gid != 2) {
-      throw new IllegalArgumentException("Grupo de usuário inválido.");
+      throw new ErroDeValidacao("O grupo selecionado é inválido.");
     }
 
     X509Certificate certificado =
         CertificadoChaveService.validarCertificadoPem(certificadoPem);
-    String nome = CertificadoUtils.extrairNome(certificado);
-    String email = CertificadoUtils.extrairEmail(certificado);
+    String nome;
+    String email;
+    try {
+      nome = CertificadoUtils.extrairNome(certificado);
+      email = CertificadoUtils.extrairEmail(certificado);
+    } catch (Exception erro) {
+      throw new ErroDeValidacao(
+          "Não foi possível ler os dados de identificação do certificado.");
+    }
     validarIdentidade(nome, email, gid == 1 ? "administrador" : "usuário");
 
-    PrivateKey chavePrivada =
-        CertificadoChaveService.descriptografarChavePrivada(
-            chavePrivadaCifrada,
-            fraseSecreta);
+    PrivateKey chavePrivada;
+    try {
+      chavePrivada = CertificadoChaveService.descriptografarChavePrivada(
+          chavePrivadaCifrada,
+          fraseSecreta);
+    } catch (Exception erro) {
+      throw new ErroDeValidacao(
+          "Não foi possível abrir a chave privada. Confira a frase secreta "
+              + "e o arquivo selecionado.");
+    }
     if (!CertificadoChaveService.validarParChaves(
         chavePrivada,
         certificado)) {
-      throw new IllegalArgumentException(
+      throw new ErroDeValidacao(
           "A chave privada não corresponde ao certificado.");
     }
 
@@ -177,25 +191,25 @@ public final class CadastroService {
       char[] confirmacaoSenha,
       char[] fraseSecreta) {
     if (senha == null || senha.length < 8 || senha.length > 10) {
-      throw new IllegalArgumentException(
+      throw new ErroDeValidacao(
           "A senha deve conter de 8 a 10 dígitos.");
     }
     for (char caractere : senha) {
       if (caractere < '0' || caractere > '9') {
-        throw new IllegalArgumentException(
+        throw new ErroDeValidacao(
             "A senha pessoal deve conter somente dígitos.");
       }
     }
     if (senhaRepetida(senha)) {
-      throw new IllegalArgumentException(
+      throw new ErroDeValidacao(
           "A senha não pode conter uma sequência numérica repetida.");
     }
     if (confirmacaoSenha == null || !Arrays.equals(senha, confirmacaoSenha)) {
-      throw new IllegalArgumentException(
+      throw new ErroDeValidacao(
           "A confirmação da senha não corresponde.");
     }
     if (fraseSecreta == null || fraseSecreta.length == 0) {
-      throw new IllegalArgumentException(
+      throw new ErroDeValidacao(
           "Informe a frase secreta da chave privada.");
     }
   }
@@ -205,16 +219,16 @@ public final class CadastroService {
       String email,
       String tipoUsuario) throws SQLException {
     if (nome == null || nome.trim().isEmpty()) {
-      throw new IllegalArgumentException(
+      throw new ErroDeValidacao(
           "O certificado não contém o nome do " + tipoUsuario + ".");
     }
     if (email == null || !email.trim().matches(
         "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
-      throw new IllegalArgumentException(
+      throw new ErroDeValidacao(
           "O certificado não contém um e-mail válido.");
     }
     if (usuarioDAO.existeEmail(email.trim())) {
-      throw new IllegalArgumentException(
+      throw new ErroDeValidacao(
           "Já existe um usuário cadastrado com esse e-mail.");
     }
   }

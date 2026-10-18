@@ -1,4 +1,4 @@
-package test.app.mainWindow;
+package test.app.principal;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -7,17 +7,17 @@ import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
-import app.mainWindow.MainWindowModel;
+import app.principal.PrincipalModel;
 import model.Usuario;
 
-public class MainWindowModelTest {
+public class PrincipalModelTest {
 
   @Test
   public void deveExporDadosEPermissoesDoUsuarioAutenticado() {
-    MainWindowModel administrador =
-        new MainWindowModel(usuario(1, "Administrador"));
-    MainWindowModel usuario =
-        new MainWindowModel(usuario(2, "Usuário"));
+    PrincipalModel administrador =
+        new PrincipalModel(usuario(1, "Administrador"));
+    PrincipalModel usuario =
+        new PrincipalModel(usuario(2, "Usuário"));
 
     assertEquals("Nome", administrador.getNomeUsuario());
     assertEquals("nome@example.com", administrador.getEmailUsuario());
@@ -29,7 +29,7 @@ public class MainWindowModelTest {
   @Test
   public void deveRejeitarUsuarioNulo() {
     try {
-      new MainWindowModel(null);
+      new PrincipalModel(null);
       fail("Esperava rejeição de usuário nulo.");
     } catch (IllegalArgumentException esperado) {
       assertEquals(

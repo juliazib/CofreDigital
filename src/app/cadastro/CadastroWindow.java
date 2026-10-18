@@ -46,8 +46,8 @@ public final class CadastroWindow extends JDialog
     this.model = model;
     this.presenter = presenter;
     setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-    setMinimumSize(new Dimension(680, 500));
-    setSize(800, 560);
+    setMinimumSize(new Dimension(680, 560));
+    setSize(800, 660);
     setLocationRelativeTo(owner);
     setContentPane(criarConteudo());
   }
@@ -61,7 +61,11 @@ public final class CadastroWindow extends JDialog
 
     JPanel corpo = new JPanel(new BorderLayout(8, 16));
     corpo.add(new JLabel(model.getDescricao()), BorderLayout.NORTH);
-    corpo.add(criarFormulario(), BorderLayout.CENTER);
+    javax.swing.JScrollPane formulario =
+        new javax.swing.JScrollPane(criarFormulario());
+    formulario.setBorder(null);
+    formulario.getVerticalScrollBar().setUnitIncrement(16);
+    corpo.add(formulario, BorderLayout.CENTER);
     conteudo.add(corpo, BorderLayout.CENTER);
 
     JPanel botoes = new JPanel();

@@ -4,6 +4,7 @@ import java.awt.Window;
 import java.sql.Connection;
 import java.util.Arrays;
 
+import app.MensagensErro;
 import service.ContextoAdministrador;
 import service.InicializacaoService;
 
@@ -71,17 +72,11 @@ public final class InicializacaoPresenter {
       if (contexto != null) {
         contexto.close();
       }
-      view.exibirErro(mensagem(erro));
+      view.exibirErro(MensagensErro.inicializacao(erro));
       return null;
     } finally {
       model.limpar();
     }
   }
 
-  private static String mensagem(Exception erro) {
-    String mensagem = erro.getMessage();
-    return mensagem == null || mensagem.trim().isEmpty()
-        ? "Não foi possível validar a chave privada do administrador."
-        : mensagem;
-  }
 }

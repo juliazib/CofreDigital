@@ -1,4 +1,4 @@
-package app.mainWindow;
+package app.principal;
 
 import java.awt.Window;
 import java.awt.event.WindowAdapter;
@@ -8,15 +8,15 @@ import java.sql.Connection;
 import app.cadastro.CadastroModel;
 import app.cadastro.CadastroPresenter;
 
-public final class MainWindowPresenter {
+public final class PrincipalPresenter {
 
   private final Connection connection;
-  private final MainWindowModel model;
-  private MainWindow janela;
+  private final PrincipalModel model;
+  private PrincipalWindow janela;
 
-  public MainWindowPresenter(
+  public PrincipalPresenter(
       Connection connection,
-      MainWindowModel model) {
+      PrincipalModel model) {
     this.connection = connection;
     this.model = model;
   }
@@ -26,7 +26,7 @@ public final class MainWindowPresenter {
       throw new IllegalStateException(
           "A janela principal já foi aberta.");
     }
-    janela = new MainWindow(owner, model, this);
+    janela = new PrincipalWindow(owner, model, this);
     janela.addWindowListener(new WindowAdapter() {
       @Override
       public void windowClosed(WindowEvent evento) {

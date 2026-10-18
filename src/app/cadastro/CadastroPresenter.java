@@ -10,6 +10,7 @@ import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.util.Arrays;
 
+import app.MensagensErro;
 import service.CadastroService;
 import service.CertificadoChaveService;
 
@@ -103,9 +104,7 @@ public final class CadastroPresenter {
       view.exibirSegredoTotp(segredoTotp);
       view.fechar();
     } catch (Exception erro) {
-      view.exibirErro(erro.getMessage() == null
-          ? "Não foi possível concluir o cadastro."
-          : erro.getMessage());
+      view.exibirErro(MensagensErro.cadastro(erro));
     } finally {
       limpar(senha);
       limpar(confirmacao);

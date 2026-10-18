@@ -6,14 +6,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JOptionPane;
 
+import app.MensagensErro;
 import app.autenticacao.AutenticacaoModel;
 import app.autenticacao.AutenticacaoPresenter;
 import app.cadastro.CadastroModel;
 import app.cadastro.CadastroPresenter;
 import app.inicializacao.InicializacaoModel;
 import app.inicializacao.InicializacaoPresenter;
-import app.mainWindow.MainWindowModel;
-import app.mainWindow.MainWindowPresenter;
+import app.principal.PrincipalModel;
+import app.principal.PrincipalPresenter;
 import database.Database;
 import database.DatabaseSchema;
 import database.UsuarioDAO;
@@ -37,6 +38,11 @@ public final class CofreDigital {
     } catch (SQLException erro) {
       System.err.println(
           "Erro ao inicializar o banco de dados: " + erro.getMessage());
+      JOptionPane.showMessageDialog(
+          null,
+          MensagensErro.erroAplicacao(),
+          "Não foi possível iniciar",
+          JOptionPane.ERROR_MESSAGE);
       fecharConexao(connection);
     }
   }
@@ -75,18 +81,18 @@ public final class CofreDigital {
           new AutenticacaoModel());
       Usuario usuario = autenticacao.abrir(null);
       if (usuario != null) {
-        MainWindowPresenter janelaPrincipal =
-            new MainWindowPresenter(
+        PrincipalPresenter janelaPrincipal =
+            new PrincipalPresenter(
                 connection,
-                new MainWindowModel(usuario));
+                new PrincipalModel(usuario));
         janelaPrincipal.abrir(null, encerrarSessao);
         sessaoIniciada = true;
       }
     } catch (SQLException erro) {
       JOptionPane.showMessageDialog(
           null,
-          "Erro durante a autenticação: " + erro.getMessage(),
-          "Erro de autenticação",
+          MensagensErro.erroAplicacao(),
+          "Não foi possível autenticar",
           JOptionPane.ERROR_MESSAGE);
     } finally {
       if (!sessaoIniciada) {

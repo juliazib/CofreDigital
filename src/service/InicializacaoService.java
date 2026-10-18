@@ -20,7 +20,8 @@ public final class InicializacaoService {
 
   public InicializacaoService(Connection connection) {
     if (connection == null) {
-      throw new IllegalArgumentException("A conexão não pode ser nula.");
+      throw new ErroDeValidacao(
+          "Não foi possível iniciar a validação do administrador.");
     }
     usuarioDAO = new UsuarioDAO(connection);
     chaveiroDAO = new ChaveiroDAO(connection);
@@ -33,7 +34,7 @@ public final class InicializacaoService {
   public ContextoAdministrador validarAdministrador(char[] fraseSecreta)
       throws Exception {
     if (fraseSecreta == null || fraseSecreta.length == 0) {
-      throw new IllegalArgumentException(
+      throw new ErroDeValidacao(
           "A frase secreta do administrador não pode ser vazia.");
     }
 
@@ -53,10 +54,16 @@ public final class InicializacaoService {
     X509Certificate certificado =
         CertificadoChaveService.validarCertificadoPem(
             chaveiro.getCertificadoPem());
-    PrivateKey chavePrivada =
-        CertificadoChaveService.descriptografarChavePrivada(
-            chaveiro.getChavePrivadaCifrada(),
-            fraseSecreta);
+    PrivateKey chavePrivada;
+    try {
+      chavePrivada = CertificadoChaveService.descriptografarChavePrivada(
+          chaveiro.getChavePrivadaCifrada(),
+          fraseSecreta);
+    } catch (Exception erro) {
+      throw new ErroDeValidacao(
+          "Não foi possível abrir a chave privada do administrador. "
+              + "Confira a frase secreta cadastrada.");
+    }
 
     if (!CertificadoChaveService.validarParChaves(
         chavePrivada,

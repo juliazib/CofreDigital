@@ -1,6 +1,7 @@
 package test.service;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -106,6 +107,24 @@ public class CertificadoChaveServiceTest {
   @Test(expected = IllegalArgumentException.class)
   public void testValidarCertificadoEmBranco() throws Exception {
     CertificadoChaveService.validarCertificadoPem("   ");
+  }
+
+  @Test
+  public void certificadoAleatorioRetornaMensagemAmigavelSemDetalhesTecnicos() {
+    try {
+      CertificadoChaveService.validarCertificadoPem(
+          "texto aleatório que não é certificado");
+    } catch (IllegalArgumentException erro) {
+      assertEquals(
+          "O certificado selecionado é inválido, expirou ou ainda não é "
+              + "válido.",
+          erro.getMessage());
+      return;
+    } catch (Exception erro) {
+      throw new AssertionError(
+          "A validação deveria falhar com mensagem controlada.", erro);
+    }
+    throw new AssertionError("Era esperado que o certificado fosse rejeitado.");
   }
 
   @Test(expected = IllegalArgumentException.class)

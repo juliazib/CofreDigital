@@ -1,12 +1,12 @@
-package app.mainWindow;
+package app.principal;
 
 import model.Usuario;
 
-public final class MainWindowModel {
+public final class PrincipalModel {
 
   private final Usuario usuario;
 
-  public MainWindowModel(Usuario usuario) {
+  public PrincipalModel(Usuario usuario) {
     if (usuario == null) {
       throw new IllegalArgumentException(
           "A janela principal exige um usuário autenticado.");
