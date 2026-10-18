@@ -53,3 +53,16 @@ tela de saída registra a escolha entre encerrar sessão, encerrar sistema ou
 voltar ao menu (8001–8004). Encerrar a sessão registra 1004 e retorna à
 autenticação; encerrar o sistema também registra 1004, fecha a conexão e
 registra 1002.
+O `logView` é um programa de apoio separado do Cofre Digital. Após compilar o
+projeto, execute-o no diretório que contém `cofre.db`, passando o caminho do
+arquivo da chave privada do administrador:
+
+```bash
+java -cp "bin:lib/*" support.LogView /caminho/para/chave-privada
+```
+
+O programa solicita a frase secreta pelo terminal sem exibi-la, valida a chave
+privada contra o certificado do administrador cadastrado e só então abre a
+tela gráfica com os registros em ordem cronológica. O caminho da chave é
+fornecido como argumento; a frase secreta nunca é argumento nem aparece na
+tela.
