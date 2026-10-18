@@ -53,6 +53,11 @@ tela de saída registra a escolha entre encerrar sessão, encerrar sistema ou
 voltar ao menu (8001–8004). Encerrar a sessão registra 1004 e retorna à
 autenticação; encerrar o sistema também registra 1004, fecha a conexão e
 registra 1002.
+No primeiro uso, depois que o cadastro inicial do administrador é concluído,
+a chave é validada e mantida em memória e a autenticação começa imediatamente.
+Ao encerrar uma sessão, a frase secreta e o contexto do administrador são
+mantidos durante a execução; uma nova autenticação começa sem solicitá-los de
+novo. Eles são descartados quando o sistema é encerrado.
 O `logView` é um programa de apoio separado do Cofre Digital. Após compilar o
 projeto, execute-o no diretório que contém `cofre.db`, passando o caminho do
 arquivo da chave privada do administrador:

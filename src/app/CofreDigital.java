@@ -2,7 +2,7 @@ package app;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Arrays;
 import java.util.function.Consumer;
 
 import javax.swing.JOptionPane;
@@ -23,6 +23,7 @@ import database.UsuarioDAO;
 import model.Usuario;
 import service.AuditoriaService;
 import service.ContextoAdministrador;
+import service.InicializacaoService;
 
 public final class CofreDigital {
 
@@ -58,8 +59,35 @@ public final class CofreDigital {
       int totalUsuarios) {
     CadastroPresenter cadastro = new CadastroPresenter(
         connection,
-        CadastroModel.cadastroInicial(totalUsuarios));
+        CadastroModel.cadastroInicial(totalUsuarios),
+        fraseSecreta -> SwingUtilities.invokeLater(
+            () -> iniciarAposCadastroInicial(connection, fraseSecreta)));
     cadastro.abrir(null, () -> encerrarSistema(connection));
+  }
+
+  private void iniciarAposCadastroInicial(
+      Connection connection,
+      char[] fraseSecreta) {
+    ContextoAdministrador contexto = null;
+    try {
+      contexto =
+          new InicializacaoService(connection).validarAdministrador(
+              fraseSecreta);
+    } catch (Exception erro) {
+      JOptionPane.showMessageDialog(
+          null,
+          "O administrador foi cadastrado, mas não foi possível "
+              + "iniciar sua sessão: "
+              + erro.getMessage(),
+          "Falha ao iniciar sessão",
+          JOptionPane.ERROR_MESSAGE);
+      encerrarSistema(connection);
+    } finally {
+      Arrays.fill(fraseSecreta, '\0');
+    }
+    if (contexto != null) {
+      iniciarAutenticacao(connection, contexto);
+    }
   }
 
   private void iniciarComAdministrador(Connection connection) {
@@ -73,22 +101,19 @@ public final class CofreDigital {
       return;
     }
 
-    AtomicBoolean recursosEncerrados = new AtomicBoolean();
-    Runnable encerrarSistemaSeNecessario = () -> {
-      if (recursosEncerrados.compareAndSet(false, true)) {
+    iniciarAutenticacao(connection, contexto);
+  }
+
+  private void iniciarAutenticacao(
+      Connection connection,
+      ContextoAdministrador contexto) {
+    Consumer<Boolean> aoEncerrarSessao = encerrarSistemaSelecionado -> {
+      if (encerrarSistemaSelecionado) {
         contexto.close();
         encerrarSistema(connection);
-      }
-    };
-    Consumer<Boolean> aoEncerrarSessao = encerrarSistemaSelecionado -> {
-      if (recursosEncerrados.compareAndSet(false, true)) {
-        contexto.close();
-        if (encerrarSistemaSelecionado) {
-          encerrarSistema(connection);
-        } else {
-          SwingUtilities.invokeLater(
-              () -> iniciarComAdministrador(connection));
-        }
+      } else {
+        SwingUtilities.invokeLater(
+            () -> iniciarAutenticacao(connection, contexto));
       }
     };
     boolean sessaoIniciada = false;
@@ -137,7 +162,8 @@ public final class CofreDigital {
           JOptionPane.ERROR_MESSAGE);
     } finally {
       if (!sessaoIniciada) {
-        encerrarSistemaSeNecessario.run();
+        contexto.close();
+        encerrarSistema(connection);
       }
     }
   }

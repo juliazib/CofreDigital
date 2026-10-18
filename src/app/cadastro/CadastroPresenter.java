@@ -11,6 +11,7 @@ import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.function.Consumer;
 
 import app.MensagensErro;
 import service.AuditoriaService;
@@ -36,14 +37,25 @@ public final class CadastroPresenter {
   private final CadastroModel model;
   private final Connection connection;
   private final AuditoriaService auditoria;
+  private final Consumer<char[]> aoConcluirCadastroInicial;
+  private boolean cadastroInicialConcluido;
+  private char[] fraseSecretaCadastroConcluido;
 
   public CadastroPresenter(
       Connection connection,
       CadastroModel model) {
+    this(connection, model, null);
+  }
+
+  public CadastroPresenter(
+      Connection connection,
+      CadastroModel model,
+      Consumer<char[]> aoConcluirCadastroInicial) {
     this.connection = connection;
     cadastroService = new CadastroService(connection);
     this.model = model;
     auditoria = AuditoriaService.getInstancia();
+    this.aoConcluirCadastroInicial = aoConcluirCadastroInicial;
   }
 
   public void abrir(Window owner, Runnable aoFechar) {
@@ -56,7 +68,9 @@ public final class CadastroPresenter {
     janela.addWindowListener(new WindowAdapter() {
       @Override
       public void windowClosed(WindowEvent evento) {
-        if (aoFechar != null) {
+        if (cadastroInicialConcluido) {
+          notificarCadastroInicialConcluido();
+        } else if (aoFechar != null) {
           aoFechar.run();
         }
       }
@@ -153,6 +167,11 @@ public final class CadastroPresenter {
               chavePrivadaCifrada,
               fraseSecreta);
       view.exibirSegredoTotp(segredoTotp);
+      if (model.isCadastroInicial()
+          && aoConcluirCadastroInicial != null) {
+        fraseSecretaCadastroConcluido = fraseSecreta.clone();
+        cadastroInicialConcluido = true;
+      }
       view.fechar();
     } catch (Exception erro) {
       if (erro instanceof ErroDeValidacao) {
@@ -197,6 +216,20 @@ public final class CadastroPresenter {
               + ": "
               + erro.getMessage());
       return false;
+    }
+  }
+
+  private void notificarCadastroInicialConcluido() {
+    char[] fraseSecreta = fraseSecretaCadastroConcluido;
+    fraseSecretaCadastroConcluido = null;
+    if (fraseSecreta == null) {
+      return;
+    }
+    try {
+      aoConcluirCadastroInicial.accept(fraseSecreta);
+    } catch (RuntimeException erro) {
+      limpar(fraseSecreta);
+      throw erro;
     }
   }
 
