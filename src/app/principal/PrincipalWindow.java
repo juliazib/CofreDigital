@@ -44,9 +44,13 @@ public final class PrincipalWindow extends JFrame {
     funcionalidades.setBorder(
         BorderFactory.createTitledBorder("Funcionalidades"));
     JButton pastaSegura = new JButton("Pasta segura");
-    pastaSegura.setEnabled(false);
-    pastaSegura.setToolTipText(
-        "A pasta segura será disponibilizada em uma próxima etapa.");
+    pastaSegura.setEnabled(presenter.podeConsultarPastaSegura());
+    if (!presenter.podeConsultarPastaSegura()) {
+      pastaSegura.setToolTipText(
+          "O contexto seguro do administrador não está disponível.");
+    }
+    pastaSegura.addActionListener(
+        evento -> presenter.consultarPastaSegura());
     funcionalidades.add(pastaSegura);
 
     if (model.podeGerenciarUsuarios()) {
@@ -65,7 +69,7 @@ public final class PrincipalWindow extends JFrame {
 
     JPanel areaInferior = new JPanel(new BorderLayout(8, 8));
     areaInferior.add(new JLabel(
-        "As funcionalidades serão habilitadas conforme forem implementadas.",
+        "Consulte os arquivos autorizados na pasta segura.",
         SwingConstants.CENTER), BorderLayout.CENTER);
     areaInferior.add(rodape, BorderLayout.SOUTH);
     conteudo.add(areaInferior, BorderLayout.SOUTH);

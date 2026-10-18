@@ -12,3 +12,4 @@ cofre.db
 *.asd
 *.shr
 *.crt
+*.pdf

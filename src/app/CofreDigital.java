@@ -84,7 +84,8 @@ public final class CofreDigital {
         PrincipalPresenter janelaPrincipal =
             new PrincipalPresenter(
                 connection,
-                new PrincipalModel(usuario));
+                new PrincipalModel(usuario),
+                contexto);
         janelaPrincipal.abrir(null, encerrarSessao);
         sessaoIniciada = true;
       }
