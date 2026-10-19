@@ -1,3 +1,6 @@
+// Julia Gomes Zibordi (2320934)
+// Marcos Paulo Marinho Vieira (2320466)
+
 package test.crypto;
 
 import static org.junit.Assert.assertArrayEquals;

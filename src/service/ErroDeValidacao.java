@@ -1,3 +1,6 @@
+// Julia Gomes Zibordi (2320934)
+// Marcos Paulo Marinho Vieira (2320466)
+
 package service;
 
 public final class ErroDeValidacao extends IllegalArgumentException {

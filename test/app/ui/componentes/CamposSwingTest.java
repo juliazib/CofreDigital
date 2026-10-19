@@ -1,3 +1,6 @@
+// Julia Gomes Zibordi (2320934)
+// Marcos Paulo Marinho Vieira (2320466)
+
 package test.app.ui.componentes;
 
 import static org.junit.Assert.assertEquals;

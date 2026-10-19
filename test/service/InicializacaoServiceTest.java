@@ -1,3 +1,6 @@
+// Julia Gomes Zibordi (2320934)
+// Marcos Paulo Marinho Vieira (2320466)
+
 package test.service;
 
 import static org.junit.Assert.assertFalse;
@@ -8,8 +11,6 @@ import static org.junit.Assert.assertTrue;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.PrivateKey;
-import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
@@ -73,8 +74,7 @@ public class InicializacaoServiceTest {
     inserirAdministrador();
     char[] frase = "admin".toCharArray();
 
-    try (ContextoAdministrador contexto =
-        service.validarAdministrador(frase)) {
+    try (ContextoAdministrador contexto = service.validarAdministrador(frase)) {
       Arrays.fill(frase, '\0');
 
       assertFalse(service.deveCadastrarAdministrador());
@@ -103,8 +103,7 @@ public class InicializacaoServiceTest {
   public void deveEncerrarContextoEAfastarAcessoPosterior()
       throws Exception {
     inserirAdministrador();
-    ContextoAdministrador contexto =
-        service.validarAdministrador("admin".toCharArray());
+    ContextoAdministrador contexto = service.validarAdministrador("admin".toCharArray());
 
     contexto.close();
 
