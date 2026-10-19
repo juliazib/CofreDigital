@@ -15,7 +15,7 @@ import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,9 +44,11 @@ import service.CertificadoChaveService;
 public final class LogView extends JFrame {
 
   private static final int TAMANHO_DESAFIO = 2048;
+  private static final ZoneId FUSO_BRASILIA =
+      ZoneId.of("America/Sao_Paulo");
   private static final DateTimeFormatter FORMATO_DATA_HORA =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS 'UTC'")
-          .withZone(ZoneOffset.UTC);
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+          .withZone(FUSO_BRASILIA);
   private static final Pattern MARCADOR_MENSAGEM =
       Pattern.compile("<(login_name|arq_name)>");
 
@@ -201,7 +203,7 @@ public final class LogView extends JFrame {
   public static final class RegistroTableModel extends AbstractTableModel {
 
     private static final String[] COLUNAS = {
-        "Data/hora (UTC)",
+        "Data/hora (Brasília)",
         "UID",
         "Código",
         "Mensagem",

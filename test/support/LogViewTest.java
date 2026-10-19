@@ -40,12 +40,12 @@ public class LogViewTest {
         new LogView.RegistroTableModel(Collections.singletonList(registro));
 
     assertEquals(5, tabela.getColumnCount());
-    assertEquals("Data/hora (UTC)", tabela.getColumnName(0));
+    assertEquals("Data/hora (Brasília)", tabela.getColumnName(0));
     assertEquals("UID", tabela.getColumnName(1));
     assertEquals("Código", tabela.getColumnName(2));
     assertEquals("Mensagem", tabela.getColumnName(3));
     assertEquals("Arquivo selecionado", tabela.getColumnName(4));
-    assertEquals("2026-10-18 19:39:06.000 UTC", tabela.getValueAt(0, 0));
+    assertEquals("2026-10-18 16:39:06.000", tabela.getValueAt(0, 0));
     assertEquals("42", tabela.getValueAt(0, 1));
     assertEquals(7018, tabela.getValueAt(0, 2));
     assertEquals(
