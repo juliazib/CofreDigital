@@ -36,6 +36,17 @@ public class IndicePastaSeguraParserTest {
   }
 
   @Test
+  public void deveInterpretarIndiceComQuebrasDeLinhaWindows()
+      throws Exception {
+    List<ArquivoSeguro> arquivos = IndicePastaSeguraParser.interpretarIndice(
+        ascii("COD001 relatorio.pdf dono@example.com GrupoA\r\n"
+            + "COD002 imagem.png outro@example.com GrupoB\r\n"));
+
+    assertEquals(2, arquivos.size());
+    assertEquals("COD002", arquivos.get(1).getCodigo());
+  }
+
+  @Test
   public void deveAceitarIndiceVazio() throws Exception {
     assertTrue(IndicePastaSeguraParser.interpretarIndice(ascii("")).isEmpty());
   }
@@ -74,6 +85,25 @@ public class IndicePastaSeguraParserTest {
                 + "COD002 8 outro@example.com\n"),
             arquivos,
             "USER@example.com");
+
+    assertEquals(1, compartilhamentos.size());
+    assertEquals(Integer.valueOf(7), compartilhamentos.get("COD001"));
+    assertNull(compartilhamentos.get("COD002"));
+  }
+
+  @Test
+  public void deveReconhecerDestinatarioDeShareComQuebrasDeLinhaWindows()
+      throws Exception {
+    List<ArquivoSeguro> arquivos = Arrays.asList(
+        new ArquivoSeguro("COD001", "a.txt", "dono@example.com", "Grupo"),
+        new ArquivoSeguro("COD002", "b.txt", "dono@example.com", "Grupo"));
+
+    Map<String, Integer> compartilhamentos =
+        IndicePastaSeguraParser.interpretarCompartilhamentos(
+            ascii("COD001 7 user@example.com\r\n"
+                + "COD002 8 outro@example.com\r\n"),
+            arquivos,
+            "user@example.com");
 
     assertEquals(1, compartilhamentos.size());
     assertEquals(Integer.valueOf(7), compartilhamentos.get("COD001"));

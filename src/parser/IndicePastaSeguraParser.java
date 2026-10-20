@@ -27,7 +27,7 @@ public final class IndicePastaSeguraParser {
   public static List<ArquivoSeguro> interpretarIndice(byte[] bytes)
       throws GeneralSecurityException {
     String conteudo = decodificarAscii(bytes, "index");
-    String[] linhas = conteudo.split("\n", -1);
+    String[] linhas = conteudo.split("\\r?\\n", -1);
     List<ArquivoSeguro> arquivos = new ArrayList<>();
     Set<String> codigos = new HashSet<>();
     for (int i = 0; i < linhas.length; i++) {
@@ -66,7 +66,7 @@ public final class IndicePastaSeguraParser {
     }
 
     Map<String, Integer> compartilhados = new LinkedHashMap<>();
-    String[] linhas = conteudo.split("\n", -1);
+    String[] linhas = conteudo.split("\\r?\\n", -1);
     for (int i = 0; i < linhas.length; i++) {
       if (i == linhas.length - 1 && linhas[i].isEmpty()) {
         continue;
